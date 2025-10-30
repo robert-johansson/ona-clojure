@@ -1,0 +1,140 @@
+Comment:  Test 1: Eternal belief (should not decay)
+Input: <bird --> animal>. Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: <bird --> animal>. Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+//*concepts
+//<bird --> animal>: { "priority": 0.900000, "usefulness": 0.999999, "useCount": 1000001, "lastUsed": 2, "frequency": 1.000000, "confidence": 0.900000, "termlinks": ["bird", "animal", "", "", "", ""]}
+<bird --> animal>. {1.000000 0.900000}
+//*done
+Comment:  Test 2: Temporal belief at time 10
+Input: <bird --> [seen]>. :|: occurrenceTime=10 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: <bird --> [seen]>. :|: occurrenceTime=10 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+//*concepts
+//<bird --> [seen]>: { "priority": 0.900000, "usefulness": 0.800000, "useCount": 4, "lastUsed": 10, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["bird", "[seen]", "", "", "seen", ""]}
+//<bird --> animal>: { "priority": 0.729000, "usefulness": 0.999999, "useCount": 1000002, "lastUsed": 10, "frequency": 1.000000, "confidence": 0.900000, "termlinks": ["bird", "animal", "", "", "", ""]}
+<bird --> animal>. {1.000000 0.900000}
+//*done
+Comment:  Test 3: Advance time to 20 - temporal belief should still be recent
+//*concepts
+//<bird --> [seen]>: { "priority": 0.810000, "usefulness": 0.666667, "useCount": 4, "lastUsed": 10, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["bird", "[seen]", "", "", "seen", ""]}
+//<bird --> animal>: { "priority": 0.656100, "usefulness": 0.999998, "useCount": 1000002, "lastUsed": 10, "frequency": 1.000000, "confidence": 0.900000, "termlinks": ["bird", "animal", "", "", "", ""]}
+<bird --> animal>. {1.000000 0.900000}
+//*done
+//*stats
+Statistics
+----------
+countConceptsMatchedTotal:	3
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	0
+currentTime:			20
+total concepts:			2
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	0
+current average concept priority:	0.000358
+current average concept usefulness:	0.000407
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		76
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
+//*done
+Comment:  Test 4: Advance time to 50 - temporal belief should be old, eternal should be preferred
+//*concepts
+//<bird --> [seen]>: { "priority": 0.729000, "usefulness": 0.266667, "useCount": 4, "lastUsed": 10, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["bird", "[seen]", "", "", "seen", ""]}
+//<bird --> animal>: { "priority": 0.590490, "usefulness": 0.999989, "useCount": 1000002, "lastUsed": 10, "frequency": 1.000000, "confidence": 0.900000, "termlinks": ["bird", "animal", "", "", "", ""]}
+<bird --> animal>. {1.000000 0.900000}
+//*done
+Comment:  Test 5: Multiple temporal events - most recent should be spike
+Input: <robin --> [flying]>. :|: occurrenceTime=100 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+Selected: <robin --> [flying]>. :|: occurrenceTime=100 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Input: <robin --> [flying]>. :|: occurrenceTime=111 Priority=1.000000 Stamp=[4] Truth: frequency=1.000000, confidence=0.800000
+Selected: <robin --> [flying]>. :|: occurrenceTime=111 Priority=1.000000 Stamp=[4] Truth: frequency=1.000000, confidence=0.800000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Input: <robin --> [flying]>. :|: occurrenceTime=122 Priority=1.000000 Stamp=[5] Truth: frequency=1.000000, confidence=0.700000
+Selected: <robin --> [flying]>. :|: occurrenceTime=122 Priority=1.000000 Stamp=[5] Truth: frequency=1.000000, confidence=0.700000
+//*concepts
+//<bird --> [seen]>: { "priority": 0.058150, "usefulness": 0.034188, "useCount": 4, "lastUsed": 10, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["bird", "[seen]", "", "", "seen", ""]}
+//<bird --> animal>: { "priority": 0.047101, "usefulness": 0.999887, "useCount": 1000002, "lastUsed": 10, "frequency": 1.000000, "confidence": 0.900000, "termlinks": ["bird", "animal", "", "", "", ""]}
+<bird --> animal>. {1.000000 0.900000}
+//<robin --> [flying]>: { "priority": 0.900000, "usefulness": 0.909091, "useCount": 10, "lastUsed": 122, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["robin", "[flying]", "", "", "flying", ""]}
+//*done
+//*stats
+Statistics
+----------
+countConceptsMatchedTotal:	6
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	0
+currentTime:			123
+total concepts:			3
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	0
+current average concept priority:	0.000245
+current average concept usefulness:	0.000474
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		78
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
+//*done
+Comment:  Test 6: Mix eternal and temporal for same concept
+Input: <cat --> animal>. Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.950000
+Selected: <cat --> animal>. Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.950000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Input: <cat --> animal>. :|: occurrenceTime=12 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.800000
+Selected: <cat --> animal>. :|: occurrenceTime=12 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.800000
+performing 5 inference steps:
+done with 5 additional inference steps.
+//*concepts
+//<cat --> animal>: { "priority": 0.531441, "usefulness": 0.999994, "useCount": 1000004, "lastUsed": 12, "frequency": 1.000000, "confidence": 0.950000, "termlinks": ["cat", "animal", "", "", "", ""]}
+<cat --> animal>. {1.000000 0.950000}
+//*done
+Comment:  After some time, temporal should decay but eternal should remain
+//*concepts
+//<cat --> animal>: { "priority": 0.478297, "usefulness": 0.999993, "useCount": 1000004, "lastUsed": 12, "frequency": 1.000000, "confidence": 0.950000, "termlinks": ["cat", "animal", "", "", "", ""]}
+<cat --> animal>. {1.000000 0.950000}
+//*done
+//*stats
+Statistics
+----------
+countConceptsMatchedTotal:	8
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	0
+currentTime:			50
+total concepts:			1
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	0
+current average concept priority:	0.000117
+current average concept usefulness:	0.000244
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		75
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
+//*done
+Statistics
+----------
+countConceptsMatchedTotal:	8
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	0
+currentTime:			50
+total concepts:			1
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	0
+current average concept priority:	0.000117
+current average concept usefulness:	0.000244
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		75
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2

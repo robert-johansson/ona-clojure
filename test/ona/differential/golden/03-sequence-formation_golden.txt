@@ -1,0 +1,66 @@
+Comment:  Test: Sequence formation from consecutive temporal events
+Comment:  Input: a at time 10, b at time 20
+Comment:  Expected: System should derive sequence (a &/ b)
+Comment:  Input first event at time 10
+Input: <a --> event>. :|: occurrenceTime=12 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: <a --> event>. :|: occurrenceTime=12 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Comment:  Advance to time 20
+performing 10 inference steps:
+done with 10 additional inference steps.
+Comment:  Input second event at time 20
+Input: <b --> event>. :|: occurrenceTime=25 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: <b --> event>. :|: occurrenceTime=25 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=13.000000 <<a --> $1> =/> <b --> $1>>. Priority=0.173772 Stamp=[1,2] Truth: frequency=1.000000, confidence=0.040889
+Derived: dt=13.000000 <<a --> event> =/> <b --> event>>. Priority=0.173772 Stamp=[1,2] Truth: frequency=1.000000, confidence=0.040889
+Comment:  Execute cycles to process and derive sequence
+performing 5 inference steps:
+done with 5 additional inference steps.
+Comment:  Check concepts - should show a, b, and (a &/ b)
+//*concepts
+//<b --> $1>: { "priority": 0.000000, "usefulness": 0.200000, "useCount": 2, "lastUsed": 25, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["b", "$1", "", "", "", ""]}
+dt=13.000000 <<a --> $1> =/> <b --> $1>>. {1.000000 0.040889}
+//<a --> event>: { "priority": 0.109419, "usefulness": 0.428571, "useCount": 6, "lastUsed": 25, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["a", "event", "", "", "", ""]}
+//<b --> event>: { "priority": 0.430467, "usefulness": 0.384615, "useCount": 5, "lastUsed": 25, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["b", "event", "", "", "", ""]}
+dt=13.000000 <<a --> event> =/> <b --> event>>. {0.988533 0.041343}
+//<a --> $1>: { "priority": 0.000000, "usefulness": 0.200000, "useCount": 2, "lastUsed": 25, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["a", "$1", "", "", "", ""]}
+//(<a --> event> &/ <b --> event>): { "priority": 0.000000, "usefulness": 0.272727, "useCount": 3, "lastUsed": 25, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["<a --> event>", "<b --> event>", "a", "event", "b", "event"]}
+//*done
+Comment:  Check stats
+//*stats
+Statistics
+----------
+countConceptsMatchedTotal:	5
+countConceptsMatchedMax:	4
+countConceptsMatchedAverage:	0
+currentTime:			34
+total concepts:			5
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	1
+current average concept priority:	0.000119
+current average concept usefulness:	0.000335
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		76
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
+//*done
+Statistics
+----------
+countConceptsMatchedTotal:	5
+countConceptsMatchedMax:	4
+countConceptsMatchedAverage:	0
+currentTime:			34
+total concepts:			5
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	1
+current average concept priority:	0.000119
+current average concept usefulness:	0.000335
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		76
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2

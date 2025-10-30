@@ -1,0 +1,26 @@
+{:paths ["src" "resources"]
+
+ :deps {org.clojure/clojure {:mvn/version "1.11.1"}
+        org.clojure/data.priority-map {:mvn/version "1.1.0"}
+        org.clojure/math.numeric-tower {:mvn/version "0.0.5"}}
+
+ :aliases
+ {:dev
+  {:extra-paths ["dev" "test"]
+   :extra-deps {org.clojure/tools.namespace {:mvn/version "1.4.4"}}}
+
+  :test
+  {:extra-paths ["test"]
+   :extra-deps {org.clojure/test.check {:mvn/version "1.1.1"}
+                lambdaisland/kaocha {:mvn/version "1.87.1366"}}
+   :main-opts ["-m" "kaocha.runner"]}
+
+  :repl
+  {:main-opts ["-m" "ona.shell"]}
+
+  :ona
+  {:main-opts ["-m" "ona.shell"]}
+
+  :build
+  {:deps {io.github.clojure/tools.build {:git/tag "v0.9.4" :git/sha "76b78fe"}}
+   :ns-default build}}}

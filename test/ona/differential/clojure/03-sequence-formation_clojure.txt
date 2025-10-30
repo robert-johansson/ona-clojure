@@ -1,0 +1,36 @@
+OpenNARS for Applications (Clojure)
+Type Narsese or commands. Use 'quit' to exit.
+// cycle
+// Test: Sequence formation from consecutive temporal events
+// Input: a at time 10, b at time 20
+// Expected: System should derive sequence (a &/ b)
+// cycle
+// Input first event at time 10
+Input: <a --> event>. :|: {1.000000 0.900000}
+// cycle
+// Advance to time 20
+// executing 10 cycles
+// cycle
+// Input second event at time 20
+Input: <b --> event>. :|: {1.000000 0.900000}
+// cycle
+// Execute cycles to process and derive sequence
+// executing 5 cycles
+// cycle
+// Check concepts - should show a, b, and (a &/ b)
+//*concepts
+//term: (<a --> event> &/ <b --> event>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 21, "frequency": 1.00, "confidence": 0.73, "termlinks": []}
+//term: <a --> event> { "priority": 0.60, "usefulness": 0.50, "useCount": 2, "lastUsed": 21, "frequency": 1.00, "confidence": 0.90, "implications": [{ "term": "<<a --> event> =/> <b --> event>>", "frequency": 1.00, "confidence": 0.42, "offset": 11 }], "termlinks": []}
+//term: <b --> event> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 21, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//*done
+// cycle
+// Check stats
+//*stats
+Statistics
+----------
+currentTime:                    27
+total concepts:                 3
+current belief events cnt:      0
+current goal events cnt:        0
+current average concept priority: 0.600000
+//*done

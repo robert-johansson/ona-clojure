@@ -1,0 +1,42 @@
+*reset
+*volume=100
+*currenttime=10
+
+// =============================================================================
+// Test: Negative Evidence & Implication Revision
+//
+// Scenario: Learn implication, make predictions, confirm/refute them
+// System should strengthen implications on success, weaken on failure
+//
+// Flow:
+// Phase 1: Learn <a =/> b> from observations
+// Phase 2: Predict b when a occurs (confirm prediction)
+// Phase 3: Predict b when a occurs (refute prediction by observing NOT b)
+// =============================================================================
+
+// Phase 1: Learn the implication
+<a --> event>. :|: {1.0 0.9}
+10
+<b --> event>. :|: {1.0 0.9}
+5
+
+// Check implication learned
+//*concepts
+
+// Phase 2: Confirm prediction
+// Observe a, system predicts b, then b actually happens
+*currenttime=50
+<a --> event>. :|: {1.0 0.9}
+5
+
+// Check prediction made
+//*concepts
+
+// Confirm the prediction by observing b
+<b --> event>. :|: {1.0 0.9}
+5
+
+// Check implication strengthened
+//*concepts
+
+*stats

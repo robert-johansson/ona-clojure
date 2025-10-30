@@ -1,0 +1,10 @@
+// Demo matching C ONA behavior
+// Register operations and use motor babbling
+*setopname 1 ^left
+*setopname 2 ^right
+*motorbabbling=0.9
+
+B. :|:
+G! :|:
+G. :|:
+100

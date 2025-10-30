@@ -1,0 +1,45 @@
+*reset
+*volume=100
+*motorbabbling=false
+*currenttime=10
+*stampid=1
+
+// Test: Temporal induction to learn implications
+// Input: a at time 10, b at time 30
+// Expected: System should derive <a =/> b> with offset=20
+
+// Input first event at time 10
+<precondition --> x>. :|: {1.0 0.9}
+
+// Advance to time 30
+20
+
+// Input second event at time 30
+<postcondition --> y>. :|: {1.0 0.9}
+
+// Execute cycles to derive implication
+10
+
+// Check concepts - should show both events
+*concepts
+
+// Check stats
+*stats
+
+// Test 2: Multiple observations should strengthen implication
+*reset
+*currenttime=10
+<key --> pressed>. :|: {1.0 0.9}
+10
+<door --> opened>. :|: {1.0 0.9}
+5
+
+// Another observation of same pattern
+*currenttime=50
+<key --> pressed>. :|: {1.0 0.9}
+10
+<door --> opened>. :|: {1.0 0.9}
+5
+
+*concepts
+*stats

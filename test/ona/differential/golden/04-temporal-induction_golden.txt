@@ -1,0 +1,106 @@
+Comment:  Test: Temporal induction to learn implications
+Comment:  Input: a at time 10, b at time 30
+Comment:  Expected: System should derive <a =/> b> with offset=20
+Comment:  Input first event at time 10
+Input: <precondition --> x>. :|: occurrenceTime=12 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: <precondition --> x>. :|: occurrenceTime=12 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Comment:  Advance to time 30
+performing 20 inference steps:
+done with 20 additional inference steps.
+Comment:  Input second event at time 30
+Input: <postcondition --> y>. :|: occurrenceTime=35 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: <postcondition --> y>. :|: occurrenceTime=35 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Comment:  Execute cycles to derive implication
+performing 10 inference steps:
+done with 10 additional inference steps.
+Comment:  Check concepts - should show both events
+//*concepts
+//<precondition --> x>: { "priority": 0.022528, "usefulness": 0.100000, "useCount": 4, "lastUsed": 12, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["precondition", "x", "", "", "", ""]}
+//<postcondition --> y>: { "priority": 0.254187, "usefulness": 0.235294, "useCount": 4, "lastUsed": 35, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["postcondition", "y", "", "", "", ""]}
+//*done
+Comment:  Check stats
+//*stats
+Statistics
+----------
+countConceptsMatchedTotal:	2
+countConceptsMatchedMax:	1
+countConceptsMatchedAverage:	0
+currentTime:			49
+total concepts:			2
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	0
+current average concept priority:	0.000061
+current average concept usefulness:	0.000078
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		77
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
+//*done
+Comment:  Test 2: Multiple observations should strengthen implication
+Input: <key --> pressed>. :|: occurrenceTime=10 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: <key --> pressed>. :|: occurrenceTime=10 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Input: <door --> opened>. :|: occurrenceTime=21 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: <door --> opened>. :|: occurrenceTime=21 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=11.000000 <<key --> pressed> =/> <door --> opened>>. Priority=0.177509 Stamp=[1,2] Truth: frequency=1.000000, confidence=0.061079
+performing 5 inference steps:
+done with 5 additional inference steps.
+Comment:  Another observation of same pattern
+Input: <key --> pressed>. :|: occurrenceTime=50 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+Selected: <key --> pressed>. :|: occurrenceTime=50 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Input: <door --> opened>. :|: occurrenceTime=61 Priority=1.000000 Stamp=[4] Truth: frequency=1.000000, confidence=0.900000
+Selected: <door --> opened>. :|: occurrenceTime=61 Priority=1.000000 Stamp=[4] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=11.000000 <<key --> pressed> =/> <door --> opened>>. Priority=0.177509 Stamp=[3,4] Truth: frequency=1.000000, confidence=0.061079
+Revised: dt=11.000000 <<key --> pressed> =/> <door --> opened>>. Priority=0.177509 Stamp=[1,3,2,4] Truth: frequency=0.988264, confidence=0.116334
+performing 5 inference steps:
+done with 5 additional inference steps.
+//*concepts
+//(<key --> pressed> &/ <door --> opened>): { "priority": 0.000000, "usefulness": 0.461538, "useCount": 6, "lastUsed": 61, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["<key --> pressed>", "<door --> opened>", "key", "pressed", "door", "opened"]}
+//<door --> opened>: { "priority": 0.478297, "usefulness": 0.562500, "useCount": 9, "lastUsed": 61, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["door", "opened", "", "", "", ""]}
+dt=11.000000 <<key --> pressed> =/> <door --> opened>>. {0.982499 0.116937}
+//<key --> pressed>: { "priority": 0.150095, "usefulness": 0.562500, "useCount": 9, "lastUsed": 61, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["key", "pressed", "", "", "", ""]}
+//*done
+//*stats
+Statistics
+----------
+countConceptsMatchedTotal:	9
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	0
+currentTime:			68
+total concepts:			3
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	1
+current average concept priority:	0.000153
+current average concept usefulness:	0.000387
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		77
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
+//*done
+Statistics
+----------
+countConceptsMatchedTotal:	9
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	0
+currentTime:			68
+total concepts:			3
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	1
+current average concept priority:	0.000153
+current average concept usefulness:	0.000387
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		77
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2

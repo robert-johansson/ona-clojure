@@ -1,0 +1,76 @@
+Comment:  =============================================================================
+Comment:  Test: Anticipation (Forward Chaining / Belief Deduction)
+Comment: 
+Comment:  Scenario: Learn <key-pressed =/> door-opened>, then observe key-pressed
+Comment:  System should predict door-opened will happen
+Comment: 
+Comment:  Flow:
+Comment:  1. Observe: key-pressed at t=10
+Comment:  2. Observe: door-opened at t=20
+Comment:  3. System learns: <key-pressed =/> door-opened>
+Comment:  4. Later: Observe key-pressed at t=50
+Comment:  5. System should predict: door-opened at t=60
+Comment:  =============================================================================
+Comment:  Step 1: Learn the temporal implication
+Input: <key --> pressed>. :|: occurrenceTime=12 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: <key --> pressed>. :|: occurrenceTime=12 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Input: <door --> opened>. :|: occurrenceTime=23 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: <door --> opened>. :|: occurrenceTime=23 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=11.000000 <<key --> pressed> =/> <door --> opened>>. Priority=0.177509 Stamp=[1,2] Truth: frequency=1.000000, confidence=0.061079
+performing 5 inference steps:
+done with 5 additional inference steps.
+Comment:  Check that implication was formed
+Comment: *concepts
+Comment:  Step 2: Observe key-pressed again
+Input: <key --> pressed>. :|: occurrenceTime=50 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+Selected: <key --> pressed>. :|: occurrenceTime=50 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+Comment:  Execute cycles - should trigger forward chaining
+performing 5 inference steps:
+done with 5 additional inference steps.
+Comment:  Check concepts for prediction
+//*concepts
+//<door --> opened>: { "priority": 0.185302, "usefulness": 0.125000, "useCount": 5, "lastUsed": 23, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["door", "opened", "", "", "", ""]}
+dt=11.000000 <<key --> pressed> =/> <door --> opened>>. {0.976801 0.062439}
+//<key --> pressed>: { "priority": 0.430467, "usefulness": 0.500000, "useCount": 8, "lastUsed": 50, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["key", "pressed", "", "", "", ""]}
+//(<key --> pressed> &/ <door --> opened>): { "priority": 0.000000, "usefulness": 0.333333, "useCount": 4, "lastUsed": 50, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["<key --> pressed>", "<door --> opened>", "key", "pressed", "door", "opened"]}
+//*done
+//*stats
+Statistics
+----------
+countConceptsMatchedTotal:	5
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	0
+currentTime:			58
+total concepts:			3
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	1
+current average concept priority:	0.000150
+current average concept usefulness:	0.000234
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		77
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
+//*done
+Statistics
+----------
+countConceptsMatchedTotal:	5
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	0
+currentTime:			58
+total concepts:			3
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	1
+current average concept priority:	0.000150
+current average concept usefulness:	0.000234
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		77
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2

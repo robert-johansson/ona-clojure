@@ -1,0 +1,85 @@
+OpenNARS for Applications (Clojure)
+Type Narsese or commands. Use 'quit' to exit.
+// Test 1: Basic belief question
+// Add a belief and query for it
+Input: A. {1.000000 0.900000}
+// executing 10 cycles
+Input: A? {1.000000 0.900000}
+Answer: A. {1.000000 0.900000} (from eternal-belief in A)
+// cycle
+// Test 2: Temporal belief question
+// Add temporal belief and query
+Input: B. :|: {1.000000 0.900000}
+// executing 10 cycles
+Input: B? {1.000000 0.900000}
+Answer: B. {1.000000 0.900000} (from belief in B)
+// cycle
+// Test 3: Unknown term question
+// Query for term that doesn't exist
+Input: UNKNOWN? {1.000000 0.900000}
+Answer: None
+// cycle
+// Test 4: Implication question
+// Learn temporal implication and query for it
+Input: C. :|: {1.000000 0.900000}
+Input: D. :|: {1.000000 0.900000}
+// executing 100 cycles
+Input: <C =/> D>? {1.000000 0.900000}
+Answer: <C =/> D>. {1.000000 0.445030} (from implication in C)
+// cycle
+// Test 5: Multiple beliefs - best answer by expectation
+// Add belief with high confidence
+Input: E. {1.000000 0.900000}
+// executing 10 cycles
+Input: E? {1.000000 0.900000}
+Answer: E. {1.000000 0.900000} (from eternal-belief in E)
+// cycle
+// Test 6: Question after prediction
+// Learn implication, observe precondition, query postcondition
+Input: F. :|: {1.000000 0.900000}
+Input: G. :|: {1.000000 0.900000}
+// executing 100 cycles
+// Now observe F again (should predict G)
+Input: F. :|: {1.000000 0.900000}
+// executing 10 cycles
+// Query for G (should find predicted belief)
+Input: G? {1.000000 0.900000}
+Answer: G. {1.000000 0.900000} (from belief in G)
+// cycle
+// Test 7: Chained implications
+Input: H. :|: {1.000000 0.900000}
+Input: I. :|: {1.000000 0.900000}
+// executing 100 cycles
+Input: I. :|: {1.000000 0.900000}
+Input: J. :|: {1.000000 0.900000}
+// executing 100 cycles
+// Should have learned H =/> I and I =/> J
+Input: <H =/> I>? {1.000000 0.900000}
+Answer: <H =/> I>. {1.000000 0.445030} (from implication in H)
+// cycle
+// Test 8: Question priming (priority boost)
+// This tests that concepts involved in answering get priority boost
+Input: K. {1.000000 0.900000}
+// executing 10 cycles
+// Check stats before question
+//*stats
+Statistics
+----------
+currentTime:                    11
+total concepts:                 1
+current belief events cnt:      0
+current goal events cnt:        0
+current average concept priority: 0.600000
+//*done
+Input: K? {1.000000 0.900000}
+Answer: K. {1.000000 0.900000} (from eternal-belief in K)
+// Check stats after question (priority should increase)
+//*stats
+Statistics
+----------
+currentTime:                    11
+total concepts:                 1
+current belief events cnt:      0
+current goal events cnt:        0
+current average concept priority: 0.700000
+//*done

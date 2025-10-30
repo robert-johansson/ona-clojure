@@ -1,0 +1,27 @@
+*reset
+*volume=100
+*motorbabbling=false
+*currenttime=10
+*stampid=1
+
+// Test: Sequence formation from consecutive temporal events
+// Input: a at time 10, b at time 20
+// Expected: System should derive sequence (a &/ b)
+
+// Input first event at time 10
+<a --> event>. :|: {1.0 0.9}
+
+// Advance to time 20
+10
+
+// Input second event at time 20
+<b --> event>. :|: {1.0 0.9}
+
+// Execute cycles to process and derive sequence
+5
+
+// Check concepts - should show a, b, and (a &/ b)
+*concepts
+
+// Check stats
+*stats

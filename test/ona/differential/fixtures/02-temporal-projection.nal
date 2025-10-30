@@ -1,0 +1,48 @@
+*reset
+*volume=100
+*motorbabbling=false
+*currenttime=1
+*stampid=1
+
+// Test 1: Eternal belief (should not decay)
+<bird --> animal>. {1.0 0.9}
+*concepts
+
+// Test 2: Temporal belief at time 10
+*currenttime=10
+<bird --> [seen]>. :|: {1.0 0.9}
+*concepts
+
+// Test 3: Advance time to 20 - temporal belief should still be recent
+*currenttime=20
+*concepts
+*stats
+
+// Test 4: Advance time to 50 - temporal belief should be old, eternal should be preferred
+*currenttime=50
+*concepts
+
+// Test 5: Multiple temporal events - most recent should be spike
+*currenttime=100
+<robin --> [flying]>. :|: {1.0 0.9}
+10
+<robin --> [flying]>. :|: {1.0 0.8}
+10
+<robin --> [flying]>. :|: {1.0 0.7}
+*concepts
+*stats
+
+// Test 6: Mix eternal and temporal for same concept
+*reset
+*currenttime=1
+*stampid=1
+<cat --> animal>. {1.0 0.95}
+10
+<cat --> animal>. :|: {1.0 0.8}
+5
+*concepts
+
+// After some time, temporal should decay but eternal should remain
+*currenttime=50
+*concepts
+*stats

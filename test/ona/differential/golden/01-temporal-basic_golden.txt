@@ -1,0 +1,70 @@
+Comment:  Test: Basic Temporal Reasoning (NAL 7)
+Comment:  Tests: Concept creation, temporal events, sequence formation
+Comment: 
+Comment:  Expected behavior:
+Comment:  - Create concepts for 'a' and 'b'
+Comment:  - Form temporal sequence (a &/ b)
+Comment:  - Learn temporal implication <a =/> b>
+Comment:  Input first temporal event
+Input: <a --> x>. :|: occurrenceTime=2 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: <a --> x>. :|: occurrenceTime=2 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+performing 1 inference steps:
+done with 1 additional inference steps.
+Comment:  Input second temporal event (should form sequence)
+Input: <b --> y>. :|: occurrenceTime=5 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: <b --> y>. :|: occurrenceTime=5 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=3.000000 <<a --> x> =/> <b --> y>>. Priority=0.215524 Stamp=[1,2] Truth: frequency=1.000000, confidence=0.226692
+performing 10 inference steps:
+done with 10 additional inference steps.
+Comment:  Capture state after sequence formation
+//*concepts
+//(<a --> x> &/ <b --> y>): { "priority": 0.000000, "usefulness": 0.200000, "useCount": 3, "lastUsed": 5, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["<a --> x>", "<b --> y>", "a", "x", "b", "y"]}
+//<a --> x>: { "priority": 0.205891, "usefulness": 0.294118, "useCount": 5, "lastUsed": 5, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["a", "x", "", "", "", ""]}
+//<b --> y>: { "priority": 0.282430, "usefulness": 0.294118, "useCount": 5, "lastUsed": 5, "frequency": 0.000000, "confidence": 0.000000, "termlinks": ["b", "y", "", "", "", ""]}
+dt=3.000000 <<a --> x> =/> <b --> y>>. {0.984594 0.229426}
+//*done
+//*stats
+Statistics
+----------
+countConceptsMatchedTotal:	3
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	0
+currentTime:			17
+total concepts:			3
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	1
+current average concept priority:	0.000119
+current average concept usefulness:	0.000192
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		77
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
+//*done
+Comment:  Expected concepts:
+Comment:  - a
+Comment:  - x
+Comment:  - b
+Comment:  - y
+Comment:  - Potentially: (a &/ b) if sequence formed
+Comment:  - Potentially: <a =/> b> if implication learned
+Statistics
+----------
+countConceptsMatchedTotal:	3
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	0
+currentTime:			18
+total concepts:			3
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	1
+current average concept priority:	0.000107
+current average concept usefulness:	0.000181
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		77
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2

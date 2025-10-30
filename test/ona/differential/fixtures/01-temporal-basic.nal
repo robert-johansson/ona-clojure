@@ -1,0 +1,33 @@
+// Test: Basic Temporal Reasoning (NAL 7)
+// Tests: Concept creation, temporal events, sequence formation
+//
+// Expected behavior:
+// - Create concepts for 'a' and 'b'
+// - Form temporal sequence (a &/ b)
+// - Learn temporal implication <a =/> b>
+
+*reset
+*volume=100
+*motorbabbling=false
+*currenttime=1
+*stampid=1
+
+// Input first temporal event
+<a --> x>. :|: {1.0 0.9}
+1
+
+// Input second temporal event (should form sequence)
+<b --> y>. :|: {1.0 0.9}
+10
+
+// Capture state after sequence formation
+*concepts
+*stats
+
+// Expected concepts:
+// - a
+// - x
+// - b
+// - y
+// - Potentially: (a &/ b) if sequence formed
+// - Potentially: <a =/> b> if implication learned

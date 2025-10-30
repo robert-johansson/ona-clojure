@@ -1,0 +1,47 @@
+OpenNARS for Applications (Clojure)
+Type Narsese or commands. Use 'quit' to exit.
+// cycle
+// =============================================================================
+// Test: Anticipation (Forward Chaining / Belief Deduction)
+//
+// Scenario: Learn <key-pressed =/> door-opened>, then observe key-pressed
+// System should predict door-opened will happen
+//
+// Flow:
+// 1. Observe: key-pressed at t=10
+// 2. Observe: door-opened at t=20
+// 3. System learns: <key-pressed =/> door-opened>
+// 4. Later: Observe key-pressed at t=50
+// 5. System should predict: door-opened at t=60
+// =============================================================================
+// cycle
+// Step 1: Learn the temporal implication
+Input: <key --> pressed>. :|: {1.000000 0.900000}
+// executing 10 cycles
+Input: <door --> opened>. :|: {1.000000 0.900000}
+// executing 5 cycles
+// cycle
+// Check that implication was formed
+//*concepts
+// cycle
+// Step 2: Observe key-pressed again
+Input: <key --> pressed>. :|: {1.000000 0.900000}
+// cycle
+// Execute cycles - should trigger forward chaining
+// executing 5 cycles
+// cycle
+// Check concepts for prediction
+//*concepts
+//term: (<key --> pressed> &/ <door --> opened>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 21, "frequency": 1.00, "confidence": 0.73, "termlinks": []}
+//term: <door --> opened> { "priority": 0.60, "usefulness": 0.50, "useCount": 2, "lastUsed": 50, "frequency": 1.00, "confidence": 0.90, "predicted": { "frequency": 1.00, "confidence": 0.38, "occurrenceTime": 61 }, "termlinks": []}
+//term: <key --> pressed> { "priority": 0.70, "usefulness": 0.50, "useCount": 3, "lastUsed": 50, "frequency": 1.00, "confidence": 0.90, "implications": [{ "term": "<<key --> pressed> =/> <door --> opened>>", "frequency": 1.00, "confidence": 0.42, "offset": 11 }], "termlinks": []}
+//*done
+//*stats
+Statistics
+----------
+currentTime:                    56
+total concepts:                 3
+current belief events cnt:      0
+current goal events cnt:        0
+current average concept priority: 0.633333
+//*done

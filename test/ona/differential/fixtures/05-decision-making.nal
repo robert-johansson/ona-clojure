@@ -1,0 +1,38 @@
+*reset
+*volume=100
+*motorbabbling=false
+*currenttime=10
+*stampid=1
+
+// Test: Decision making through temporal implication
+// Scenario: Learn <key-pressed =/> door-opened>, then want door-opened!
+//
+// Flow:
+// 1. Observe: key-pressed at t=10
+// 2. Observe: door-opened at t=20
+// 3. System learns: <key-pressed =/> door-opened>
+// 4. Goal: door-opened!
+// 5. System should decide: high desire for implication
+
+// Step 1: Learn the temporal implication
+<key --> pressed>. :|: {1.0 0.9}
+10
+<door --> opened>. :|: {1.0 0.9}
+5
+
+// Check that implication was formed
+*concepts
+
+// Step 2: Establish belief that key is pressed NOW
+*currenttime=50
+<key --> pressed>. :|: {1.0 0.9}
+1
+
+// Step 3: Add goal for door to be opened
+<door --> opened>! :|: {1.0 0.9}
+
+// Execute cycles - should trigger decision making
+10
+
+*concepts
+*stats

@@ -1,0 +1,64 @@
+// Test 1: Basic belief question
+// Add a belief and query for it
+A.
+10
+A?
+
+// Test 2: Temporal belief question
+// Add temporal belief and query
+B. :|:
+10
+B?
+
+// Test 3: Unknown term question
+// Query for term that doesn't exist
+UNKNOWN?
+
+// Test 4: Implication question
+// Learn temporal implication and query for it
+*reset
+C. :|:
+D. :|:
+100
+<C =/> D>?
+
+// Test 5: Multiple beliefs - best answer by expectation
+*reset
+// Add belief with high confidence
+E. {1.0 0.9}
+10
+E?
+
+// Test 6: Question after prediction
+// Learn implication, observe precondition, query postcondition
+*reset
+F. :|:
+G. :|:
+100
+// Now observe F again (should predict G)
+F. :|:
+10
+// Query for G (should find predicted belief)
+G?
+
+// Test 7: Chained implications
+*reset
+H. :|:
+I. :|:
+100
+I. :|:
+J. :|:
+100
+// Should have learned H =/> I and I =/> J
+<H =/> I>?
+
+// Test 8: Question priming (priority boost)
+// This tests that concepts involved in answering get priority boost
+*reset
+K.
+10
+// Check stats before question
+*stats
+K?
+// Check stats after question (priority should increase)
+*stats

@@ -1,0 +1,81 @@
+Comment:  =============================================================================
+Comment:  Test: Negative Evidence & Implication Revision
+Comment: 
+Comment:  Scenario: Learn implication, make predictions, confirm/refute them
+Comment:  System should strengthen implications on success, weaken on failure
+Comment: 
+Comment:  Flow:
+Comment:  Phase 1: Learn <a =/> b> from observations
+Comment:  Phase 2: Predict b when a occurs (confirm prediction)
+Comment:  Phase 3: Predict b when a occurs (refute prediction by observing NOT b)
+Comment:  =============================================================================
+Comment:  Phase 1: Learn the implication
+Input: <a --> event>. :|: occurrenceTime=12 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: <a --> event>. :|: occurrenceTime=12 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Input: <b --> event>. :|: occurrenceTime=23 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: <b --> event>. :|: occurrenceTime=23 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=11.000000 <<a --> $1> =/> <b --> $1>>. Priority=0.177509 Stamp=[1,2] Truth: frequency=1.000000, confidence=0.061079
+Derived: dt=11.000000 <<a --> event> =/> <b --> event>>. Priority=0.177509 Stamp=[1,2] Truth: frequency=1.000000, confidence=0.061079
+performing 5 inference steps:
+done with 5 additional inference steps.
+Comment:  Check implication learned
+Comment: *concepts
+Comment:  Phase 2: Confirm prediction
+Comment:  Observe a, system predicts b, then b actually happens
+Input: <a --> event>. :|: occurrenceTime=50 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+Selected: <a --> event>. :|: occurrenceTime=50 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+performing 5 inference steps:
+done with 5 additional inference steps.
+Comment:  Check prediction made
+Comment: *concepts
+Comment:  Confirm the prediction by observing b
+Input: <b --> event>. :|: occurrenceTime=58 Priority=1.000000 Stamp=[4] Truth: frequency=1.000000, confidence=0.900000
+Selected: <b --> event>. :|: occurrenceTime=58 Priority=1.000000 Stamp=[4] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=8.000000 <<a --> $1> =/> <b --> $1>>. Priority=0.186606 Stamp=[3,4] Truth: frequency=1.000000, confidence=0.106854
+Revised: dt=9.064769 <<a --> $1> =/> <b --> $1>>. Priority=0.186606 Stamp=[1,3,2,4] Truth: frequency=0.995835, confidence=0.156447
+Derived: dt=8.000000 <<a --> event> =/> <b --> event>>. Priority=0.186606 Stamp=[3,4] Truth: frequency=1.000000, confidence=0.106854
+Revised: dt=9.072796 <<a --> event> =/> <b --> event>>. Priority=0.186606 Stamp=[1,3,2,4] Truth: frequency=0.991704, confidence=0.156996
+performing 5 inference steps:
+done with 5 additional inference steps.
+Comment:  Check implication strengthened
+Comment: *concepts
+//*stats
+Statistics
+----------
+countConceptsMatchedTotal:	13
+countConceptsMatchedMax:	4
+countConceptsMatchedAverage:	0
+currentTime:			66
+total concepts:			5
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	1
+current average concept priority:	0.000150
+current average concept usefulness:	0.000569
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		76
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
+//*done
+Statistics
+----------
+countConceptsMatchedTotal:	13
+countConceptsMatchedMax:	4
+countConceptsMatchedAverage:	0
+currentTime:			66
+total concepts:			5
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	1
+current average concept priority:	0.000150
+current average concept usefulness:	0.000569
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		76
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2

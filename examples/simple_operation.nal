@@ -1,0 +1,35 @@
+// Simple Operation Demo
+// This demonstrates sensorimotor learning with operations
+//
+// Scenario: Learn that being in state A and doing ^op leads to state B
+// Then: Give goal B and watch system decide to do ^op
+
+*reset
+*volume=100
+
+// Step 1: Teach the system through experience
+// "I'm in state A"
+<state --> A>. :|:
+
+// "I did action ^op"
+^op. :|:
+
+// "Now I'm in state B"
+<state --> B>. :|:
+
+// Let the system process and form temporal implications
+100
+
+// Step 2: Check what was learned
+*concepts
+
+// Step 3: Give the system a goal to achieve state B
+// It should figure out it needs to be in state A and do ^op
+*reset
+<state --> A>. :|:
+10
+<state --> B>! :|:
+20
+
+// The system should output a decision to execute ^op
+// (In a real environment with registered operations, it would execute)

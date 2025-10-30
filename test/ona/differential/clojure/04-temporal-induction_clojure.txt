@@ -1,0 +1,63 @@
+OpenNARS for Applications (Clojure)
+Type Narsese or commands. Use 'quit' to exit.
+// cycle
+// Test: Temporal induction to learn implications
+// Input: a at time 10, b at time 30
+// Expected: System should derive <a =/> b> with offset=20
+// cycle
+// Input first event at time 10
+Input: <precondition --> x>. :|: {1.000000 0.900000}
+// cycle
+// Advance to time 30
+// executing 20 cycles
+// cycle
+// Input second event at time 30
+Input: <postcondition --> y>. :|: {1.000000 0.900000}
+// cycle
+// Execute cycles to derive implication
+// executing 10 cycles
+// cycle
+// Check concepts - should show both events
+//*concepts
+//term: <postcondition --> y> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 31, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: <precondition --> x> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 10, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//*done
+// cycle
+// Check stats
+//*stats
+Statistics
+----------
+currentTime:                    42
+total concepts:                 2
+current belief events cnt:      0
+current goal events cnt:        0
+current average concept priority: 0.600000
+//*done
+// cycle
+// Test 2: Multiple observations should strengthen implication
+Input: <key --> pressed>. :|: {1.000000 0.900000}
+// executing 10 cycles
+Input: <door --> opened>. :|: {1.000000 0.900000}
+// executing 5 cycles
+// cycle
+// Another observation of same pattern
+Input: <key --> pressed>. :|: {1.000000 0.900000}
+// executing 10 cycles
+Input: <door --> opened>. :|: {1.000000 0.900000}
+^prediction-confirmed: <door --> opened>
+// executing 5 cycles
+// cycle
+//*concepts
+//term: (<key --> pressed> &/ <door --> opened>) { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 61, "frequency": 1.00, "confidence": 0.73, "termlinks": []}
+//term: <door --> opened> { "priority": 0.70, "usefulness": 0.50, "useCount": 3, "lastUsed": 61, "frequency": 1.00, "confidence": 0.90, "predicted": { "frequency": 1.00, "confidence": 0.38, "occurrenceTime": 61 }, "termlinks": []}
+//term: <key --> pressed> { "priority": 0.70, "usefulness": 0.50, "useCount": 4, "lastUsed": 61, "frequency": 1.00, "confidence": 0.90, "implications": [{ "term": "<<key --> pressed> =/> <door --> opened>>", "frequency": 1.00, "confidence": 0.61, "offset": 11.0 }], "termlinks": []}
+//*done
+//*stats
+Statistics
+----------
+currentTime:                    67
+total concepts:                 3
+current belief events cnt:      0
+current goal events cnt:        0
+current average concept priority: 0.700000
+//*done

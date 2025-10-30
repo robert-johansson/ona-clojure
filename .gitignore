@@ -1,0 +1,30 @@
+# Clojure
+.cpcache/
+.nrepl-port
+.lein-*
+target/
+classes/
+checkouts/
+pom.xml
+pom.xml.asc
+*.jar
+*.class
+
+# Development notes (keep local)
+*_IMPLEMENTATION.md
+PROJECT_SUMMARY.md
+
+# Incomplete Python interface
+misc/python/
+
+# Editor files
+*.swp
+*~
+.#*
+\#*\#
+.DS_Store
+
+# IDE
+.idea/
+*.iml
+.vscode/
