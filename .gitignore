@@ -10,6 +10,15 @@ pom.xml.asc
 *.jar
 *.class
 
+# GraalVM Native Image
+ona
+ona.exe
+*.so
+*.dylib
+*.dll
+graal_isolate.h
+graal_isolate_dynamic.h
+
 # Development notes (keep local)
 *_IMPLEMENTATION.md
 PROJECT_SUMMARY.md
