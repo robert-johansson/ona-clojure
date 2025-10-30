@@ -18,6 +18,7 @@ ona.exe
 *.dll
 graal_isolate.h
 graal_isolate_dynamic.h
+reports/
 
 # Development notes (keep local)
 *_IMPLEMENTATION.md
