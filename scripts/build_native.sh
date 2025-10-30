@@ -5,16 +5,27 @@ echo "================================================"
 echo "Building ONA Clojure Native Binary with GraalVM"
 echo "================================================"
 
-# Check if GraalVM native-image is available
-if ! command -v native-image &> /dev/null; then
-    echo "Error: native-image not found. Please install GraalVM and native-image."
+# Find native-image executable
+NATIVE_IMAGE=""
+if [ -n "$JAVA_HOME" ] && [ -f "$JAVA_HOME/bin/native-image" ]; then
+    NATIVE_IMAGE="$JAVA_HOME/bin/native-image"
+elif command -v native-image &> /dev/null; then
+    NATIVE_IMAGE="native-image"
+else
+    echo "Error: native-image not found."
     echo ""
-    echo "Installation:"
-    echo "  1. Download GraalVM from https://www.graalvm.org/downloads/"
-    echo "  2. Set JAVA_HOME to GraalVM directory"
-    echo "  3. Install native-image: gu install native-image"
+    echo "Checked:"
+    echo "  - \$JAVA_HOME/bin/native-image: $JAVA_HOME/bin/native-image"
+    echo "  - PATH: $(command -v native-image 2>&1 || echo 'not found')"
+    echo ""
+    echo "Solutions:"
+    echo "  1. If using SDKMAN: sdk use java <graalvm-version>"
+    echo "  2. Set JAVA_HOME: export JAVA_HOME=/path/to/graalvm"
+    echo "  3. Add to PATH: export PATH=\$JAVA_HOME/bin:\$PATH"
     exit 1
 fi
+
+echo "Using native-image: $NATIVE_IMAGE"
 
 echo ""
 echo "Step 1: Checking GraalVM version..."
@@ -64,7 +75,7 @@ echo ""
 echo "Step 5: Building native image..."
 echo "This may take several minutes..."
 
-native-image \
+$NATIVE_IMAGE \
     --no-fallback \
     --initialize-at-build-time \
     --report-unsupported-elements-at-runtime \
