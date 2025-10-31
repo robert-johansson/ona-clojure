@@ -7,7 +7,8 @@
   3. Calculate desire = deduction(belief(A), <A =/> G>, goal(G))
   4. If desire > threshold, execute action
   5. Otherwise, derive subgoal A!"
-  (:require [ona.event :as event]
+  (:require [ona.core :as core]
+            [ona.event :as event]
             [ona.term :as term]
             [ona.truth :as truth]
             [ona.implication :as implication]
@@ -153,6 +154,9 @@
 
   Calculate desire = expectation(deduction(belief(A), <A =/> G>, goal(G)))
 
+  For sensorimotor implications like <(context &/ ^op) =/> goal>,
+  extracts the operation ^op from the precondition sequence.
+
   Args:
     goal - Goal event
     impl - Implication <precondition =/> goal>
@@ -164,13 +168,32 @@
   [goal impl precondition-belief current-time]
   (if (nil? precondition-belief)
     (null-decision)
-    (let [;; Extract operation from implication precondition
-          operation-term (implication/get-precondition impl)
+    (let [precondition-term (implication/get-precondition impl)
 
-          ;; Calculate desire using goal deduction
+          ;; CRITICAL FIX: Extract operation from sequence if present
+          ;; For sensorimotor implications like <(context &/ ^left) =/> goal>,
+          ;; we need to extract ^left, not use the whole sequence
+          [extracted-op remaining-context] (term/extract-operation-from-sequence precondition-term)
+
+          ;; Use extracted operation if found, otherwise use precondition as-is
+          ;; (for non-sensorimotor implications like <condition =/> goal>)
+          operation-term (or extracted-op precondition-term)
+
+          ;; Step 1: Calculate desire for precondition using goal deduction
+          ;; From C ONA: Inference_GoalDeduction(goal, impl)
+          ;; Result: desire((context &/ ^op)!) based on goal and implication
           contextual-operation (goal-deduction goal impl current-time)
-          desire-truth (:truth contextual-operation)
-          desire-expectation (truth/expectation desire-truth)
+
+          ;; Step 2: Apply sequence deduction with belief
+          ;; From C ONA: Inference_GoalSequenceDeduction(contextualOp, belief)
+          ;; This combines the contextual operation desire with the belief truth
+          ;; CRITICAL: We must use the BELIEF truth, not just impl truth!
+          belief-truth (:truth precondition-belief)
+          contextual-op-truth (:truth contextual-operation)
+
+          ;; Apply deduction: desire(^op!) = deduction(desire((ctx &/ ^op)!), belief(ctx))
+          final-desire-truth (truth/deduction contextual-op-truth belief-truth)
+          desire-expectation (truth/expectation final-desire-truth)
 
           ;; Check if desire is high enough
           execute? (>= desire-expectation decision-threshold)]
@@ -199,15 +222,99 @@
   Returns:
     Vector of [implication precondition-concept substitution] triples"
   [state goal]
-  (let [goal-term (:term goal)]
+  (let [goal-term (:term goal)
+        volume (:volume state)
+        all-concepts (vals (:concepts state))]
+
+    ;; DEBUG logging
+    (when (= volume 100)
+      (println (str "^debug[find-matching-implications]: Goal = " (term/format-term goal-term)))
+      (println (str "^debug[find-matching-implications]: Scanning " (count all-concepts) " concepts")))
+
     ;; Scan all concepts for implications
-    (for [concept (vals (:concepts state))
-          impl (vals (:implications concept))
-          :let [postcondition (implication/get-postcondition impl)
-                ;; NAL-6: Unify postcondition (pattern) with goal (specific)
-                substitution (var/unify postcondition goal-term)]
-          :when (:success substitution)]
-      [impl concept substitution])))
+    (let [results
+          (for [concept all-concepts
+                :let [concept-term (:term concept)
+                      impls (vals (:implications concept))]
+                :when (seq impls)  ; Only process concepts with implications
+                :let [_ (when (= volume 100)
+                          (println (str "^debug[find-matching-implications]:   Concept " (term/format-term concept-term)
+                                       " has " (count impls) " implications")))]
+                impl impls
+                :let [postcondition (implication/get-postcondition impl)
+                      _ (when (= volume 100)
+                          (println (str "^debug[find-matching-implications]:     Impl: " (term/format-term (:term impl))))
+                          (println (str "^debug[find-matching-implications]:       Postcond: " (term/format-term postcondition))))
+                      ;; NAL-6: Unify postcondition (pattern) with goal (specific)
+                      substitution (var/unify postcondition goal-term)
+                      _ (when (= volume 100)
+                          (println (str "^debug[find-matching-implications]:       Match: " (:success substitution))))]
+                :when (:success substitution)]
+            [impl concept substitution])]
+
+      (when (= volume 100)
+        (println (str "^debug[find-matching-implications]: Found " (count results) " matching implications")))
+
+      results)))
+
+(defn get-sequence-components
+  "Extract all components from a sequence term.
+   For sequences like (A &/ B), returns [A B].
+   For nested sequences like ((A &/ B) &/ C), returns [A B C].
+   For non-sequences, returns [term]."
+  [term]
+  (if (and (= (:type term) :compound)
+           (= (:copula term) "&/"))
+    ;; It's a sequence - recursively extract components
+    (concat (get-sequence-components (:subject term))
+            (get-sequence-components (:predicate term)))
+    ;; Not a sequence - return as single-element list
+    [term]))
+
+(defn context-has-recent-beliefs?
+  "Check if a context term (possibly a sequence) has recent beliefs.
+   For atomic terms: check if the concept has a recent belief-spike.
+   For sequences: check if ALL components have recent beliefs."
+  [state context-term current-time]
+  (let [components (get-sequence-components context-term)
+        volume (:volume state)]
+    ;; Debug logging if volume is 100
+    (when (= volume 100)
+      (println (str "^debug: checking context " (term/format-term context-term)))
+      (println (str "^debug:   components: " (mapv term/format-term components))))
+
+    ;; Check if ALL components have recent beliefs
+    (every? (fn [component]
+              (let [key (core/get-concept-key component)]
+                (when (= volume 100)
+                  (println (str "^debug:   component " (term/format-term component)
+                               " → key " (term/format-term key))))
+                (if-let [concept (get-in state [:concepts key])]
+                  (do
+                    (when (= volume 100)
+                      (println (str "^debug:     concept found, belief-spike: "
+                                   (if (:belief-spike concept) "YES" "NO"))))
+                    (if-let [belief-spike (:belief-spike concept)]
+                      (let [is-belief (= (:type belief-spike) :belief)
+                            occ-time (:occurrence-time belief-spike)
+                            age (- current-time occ-time)
+                            is-recent (<= age 20)]
+                        (when (= volume 100)
+                          (println (str "^debug:       type=" (:type belief-spike)
+                                       ", occ-time=" occ-time
+                                       ", current-time=" current-time
+                                       ", age=" age
+                                       ", recent=" is-recent)))
+                        (and is-belief is-recent))
+                      (do
+                        (when (= volume 100)
+                          (println "^debug:       NO belief-spike"))
+                        false)))
+                  (do
+                    (when (= volume 100)
+                      (println "^debug:     concept NOT found"))
+                    false))))
+            components)))
 
 (defn best-candidate
   "Find the best action to achieve a goal.
@@ -228,46 +335,79 @@
   Returns:
     Best decision (or null-decision if none found)"
   [state goal current-time]
-  (let [;; Step 1: Find implications whose postcondition unifies with goal
+  (let [volume (:volume state)
+        ;; Step 1: Find implications whose postcondition unifies with goal
         matches (find-matching-implications state goal)
 
-        all-concepts (vals (:concepts state))
-
-        ;; Step 2-5: For each matching implication, find best belief match
+        ;; Step 2-5: For each matching implication, check if precondition context is believed
+        ;; CRITICAL: Following C ONA, we check the context WITHOUT operations
+        ;; For <((context &/ ^op) =/> goal>, we check if 'context' concept has recent belief
         decisions
-        (for [[impl _concept goal-subst] matches
-              :let [;; Apply goal substitution to implication
+        (for [[impl sequence-concept goal-subst] matches
+              :let [;; Get precondition from implication
+                    precondition-term (implication/get-precondition impl)
+
+                    ;; CRITICAL: Strip operations to get context
+                    ;; E.g., (context &/ ^op) → context
+                    context-term (term/get-precondition-without-op precondition-term)]
+
+              ;; Check if context has recent beliefs (handles both atomic and sequence contexts)
+              :when (context-has-recent-beliefs? state context-term current-time)
+
+              ;; For sequences, use the first component's belief as representative
+              :let [components (get-sequence-components context-term)
+                    first-component (first components)
+                    first-key (core/get-concept-key first-component)
+                    first-concept (get-in state [:concepts first-key])
+                    belief-spike (:belief-spike first-concept)]
+
+              ;; Now we have: implication with operation, and belief for context
+              :let [;; Apply goal substitution to implication (for variable cases)
                     impl-after-goal (var/substitute (:term impl) goal-subst)
-                    precondition-term (term/get-subject impl-after-goal)]
 
-              ;; Step 3: Try to unify precondition with each concept's belief
-              belief-concept all-concepts
-              :let [belief-spike (:belief-spike belief-concept)]
-              :when (and belief-spike
-                         (= (:type belief-spike) :belief))
-              :let [belief-term (:term belief-spike)
-                    ;; Unify precondition (pattern) with belief (specific)
-                    belief-subst (var/unify precondition-term belief-term)]
-              :when (:success belief-subst)
-
-              ;; Step 4: Apply belief substitution to get fully instantiated implication
-              :let [fully-instantiated-term (var/substitute impl-after-goal belief-subst)
+                    ;; Create instantiated implication with belief
                     fully-instantiated-impl (implication/make-implication
-                                              fully-instantiated-term
+                                              impl-after-goal
                                               (:truth impl)
                                               (:occurrence-time-offset impl)
                                               (:creation-time impl)
                                               {:stamp (:stamp impl)})]]
 
-          ;; Step 5: Calculate desire
-          (consider-implication goal fully-instantiated-impl belief-spike current-time))
+          ;; Step 5: Calculate desire using first component's belief spike
+          (let [decision (consider-implication goal fully-instantiated-impl belief-spike current-time)
+                ;; Count components in context for specificity ranking
+                ;; More specific (more components) should be preferred
+                specificity (count components)]
+            (assoc decision :specificity specificity)))
 
-        ;; Select best by desire
+        ;; Select best by SPECIFICITY first, then by desire
+        ;; This ensures compound conditions (red & bright) are preferred over simple ones (bright)
         best (reduce (fn [best current]
-                       (if (> (:desire current) (:desire best))
-                         current
-                         best))
-                     (null-decision)
+                       (when (= volume 100)
+                         (println (str "^debug[best-candidate]: Comparing decisions"))
+                         (println (str "^debug[best-candidate]:   current: op=" (term/format-term (:operation-term current))
+                                      " specificity=" (:specificity current)
+                                      " desire=" (format "%.3f" (:desire current))))
+                         (println (str "^debug[best-candidate]:   best:    op=" (term/format-term (:operation-term best))
+                                      " specificity=" (:specificity best)
+                                      " desire=" (format "%.3f" (:desire best)))))
+                       (let [result (cond
+                                      ;; If current is more specific, always prefer it
+                                      (> (:specificity current) (:specificity best))
+                                      current
+
+                                      ;; If same specificity, prefer higher desire
+                                      (and (= (:specificity current) (:specificity best))
+                                           (> (:desire current) (:desire best)))
+                                      current
+
+                                      ;; Otherwise keep best
+                                      :else
+                                      best)]
+                         (when (= volume 100)
+                           (println (str "^debug[best-candidate]:   → selected: " (term/format-term (:operation-term result)))))
+                         result))
+                     (assoc (null-decision) :specificity 0)  ; null-decision has 0 specificity
                      decisions)]
     best))
 
@@ -377,16 +517,16 @@
                        {:stamp (:stamp impl)})
 
         ;; Revise existing implication with negative evidence
-        concept-key (:representation concept-term)
-        impl-key (:representation (:term impl))
+        concept-key (core/get-concept-key concept-term)
+        impl-term (:term impl)
 
-        existing-impl (get-in state [:concepts concept-key :implications impl-key])
+        existing-impl (get-in state [:concepts concept-key :implications impl-term])
         revised-impl (if existing-impl
                       (implication/revise-implication existing-impl negative-impl)
                       negative-impl)]
 
     ;; Update state with revised implication
-    (assoc-in state [:concepts concept-key :implications impl-key] revised-impl)))
+    (assoc-in state [:concepts concept-key :implications impl-term] revised-impl)))
 
 (defn check-anticipations
   "Check if anticipations were satisfied or failed.
@@ -441,7 +581,11 @@
   Returns:
     Decision record"
   [state goal current-time]
-  (let [;; Try motor babbling with certain probability
+  (let [volume (:volume state)
+        _ (when (= volume 100)
+            (println (str "^debug[suggest-decision]: CALLED for goal " (term/format-term (:term goal)))))
+
+        ;; Try motor babbling with certain probability
         motor-babbling-enabled (get-in state [:config :motor-babbling] false)
         babbling-chance (get-in state [:config :motor-babbling-chance] motor-babbling-chance)
         ;; Use seeded RNG if available, otherwise default rand
@@ -476,7 +620,8 @@
   ;; Setup: Learn <key-pressed =/> door-opened>
   (def state (core/init-state))
 
-  ;; Add implication
+  ;; Add implication <key-pressed =/> door-opened>
+  ;; Note: This will be stored in the "door-opened" concept (postcondition)
   (def impl (implication/make-implication
              (term/make-temporal-implication
               (term/make-atomic-term "key-pressed")
@@ -484,7 +629,7 @@
              (truth/make-truth 0.9 0.8)
              10.0
              100))
-  (def state (core/add-implication state impl (term/make-atomic-term "key-pressed")))
+  (def state (core/add-implication state impl))
 
   ;; Add belief that key-pressed is true
   (def state (core/add-input-belief state

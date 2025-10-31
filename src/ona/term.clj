@@ -7,7 +7,8 @@
      - Inheritance: <a --> b>
      - Sequence: (a &/ b)
      - Temporal implication: <a =/> b>
-     - And more...")
+     - And more..."
+  (:require [clojure.string :as str]))
 
 ;; =============================================================================
 ;; Copula Constants
@@ -130,8 +131,163 @@
     1))  ; Atomic term or non-sequence compound
 
 ;; =============================================================================
+;; Operation Term Helpers
+;; =============================================================================
+
+(defn operation-term?
+  "Check if term is an operation (starts with ^).
+
+   Operations are atomic terms that start with ^ (e.g., ^left, ^right, ^pick).
+   They represent motor commands/actions in sensorimotor reasoning.
+
+   Args:
+     term - Term to check
+
+   Returns:
+     Boolean - true if term is an operation"
+  [term]
+  (and (atomic-term? term)
+       (some? (:representation term))
+       (str/starts-with? (:representation term) "^")))
+
+(defn extract-operation-from-sequence
+  "Extract operation from rightmost position in a sequence.
+
+   Recursively searches right side of sequence for operation term.
+   Returns both the operation and the remaining sequence without it.
+
+   Examples:
+   - (A &/ ^op) → [^op, A]
+   - ((A &/ B) &/ ^op) → [^op, (A &/ B)]
+   - (A &/ B) → [nil, (A &/ B)]  ; No operation
+
+   Args:
+     seq-term - Sequence term to search
+
+   Returns:
+     Vector [operation-term remaining-sequence]
+     - operation-term: The ^op term if found, nil otherwise
+     - remaining-sequence: The sequence without the operation"
+  [seq-term]
+  (cond
+    ;; Not a sequence - check if it's an operation
+    (not (sequence? seq-term))
+    (if (operation-term? seq-term)
+      [seq-term nil]  ; Found operation, no remaining sequence
+      [nil seq-term])  ; Not an operation, return as remaining
+
+    ;; Sequence: check if predicate (right side) is an operation
+    (operation-term? (:predicate seq-term))
+    [(:predicate seq-term) (:subject seq-term)]  ; Found it!
+
+    ;; Sequence: predicate is compound, recurse on it
+    (sequence? (:predicate seq-term))
+    (let [[op remaining] (extract-operation-from-sequence (:predicate seq-term))]
+      (if op
+        ;; Found operation in predicate, reconstruct remaining with subject
+        [op (if remaining
+              (make-compound-term copula-sequence (:subject seq-term) remaining)
+              (:subject seq-term))]
+        ;; No operation found
+        [nil seq-term]))
+
+    ;; Predicate is not a sequence and not an operation
+    :else
+    [nil seq-term]))
+
+(defn sequence-contains-operation?
+  "Check if a sequence contains an operation anywhere.
+
+   Recursively searches both sides of sequence.
+
+   Args:
+     term - Term to check
+
+   Returns:
+     Boolean - true if sequence contains an operation"
+  [term]
+  (cond
+    (operation-term? term) true
+    (not (sequence? term)) false
+    :else (or (sequence-contains-operation? (:subject term))
+              (sequence-contains-operation? (:predicate term)))))
+
+(defn get-precondition-without-op
+  "Get precondition with all operations stripped.
+
+   From C ONA: Narsese_GetPreconditionWithoutOp
+   Recursively removes operations from right side of sequences.
+
+   Examples:
+   - (context &/ ^op) → context
+   - ((A &/ B) &/ ^op) → (A &/ B)
+   - (((A &/ B) &/ C) &/ ^op) → ((A &/ B) &/ C)
+   - context → context  (no operation)
+
+   Args:
+     precondition - Precondition term (may be sequence with operations)
+
+   Returns:
+     Term with all operations removed"
+  [precondition]
+  (if (sequence? precondition)  ; Is it a sequence?
+    (let [potential-op (:predicate precondition)]  ; Check right side
+      (if (operation-term? potential-op)
+        ;; Right side is an operation - strip it and recurse on left
+        (get-precondition-without-op (:subject precondition))
+        ;; Right side is not an operation - return as is
+        precondition))
+    ;; Not a sequence - return as is
+    precondition))
+
+;; =============================================================================
 ;; Parsing (Simplified)
 ;; =============================================================================
+
+(defn find-main-copula
+  "Find the main copula in a compound term string.
+   Returns [copula-str start-pos end-pos] or nil if not found.
+   Correctly handles nested brackets to find top-level copula only."
+  [s]
+  (let [s (clojure.string/trim s)
+        ;; Try each copula pattern in priority order
+        ;; Must check multi-char copulas BEFORE single-char ones
+        patterns ["=/>" "==>" "&/" "-->"]
+        len (count s)]
+    (some
+     (fn [pattern]
+       (let [pattern-len (count pattern)]
+         ;; Scan through string looking for pattern at nesting level 0
+         (loop [i 0
+                nesting 0]
+           (cond
+             ;; Reached end of string without finding pattern
+             (>= i len)
+             nil
+
+             ;; Check for pattern at nesting level 0 FIRST (before updating nesting)
+             (and (zero? nesting)
+                  (<= (+ i pattern-len) len)
+                  (= pattern (subs s i (+ i pattern-len))))
+             [pattern i (+ i pattern-len)]
+
+             ;; Update nesting level and continue
+             :else
+             (let [ch (get s i)
+                   ;; Check if > is part of a copula (=/>, ==>, -->)
+                   ;; If so, don't treat it as a closing bracket
+                   prev-char (when (> i 0) (get s (dec i)))
+                   is-copula-gt? (and (= ch \>)
+                                     (or (and (= prev-char \/) (= (get s (- i 2)) \=))  ; =/>
+                                         (and (= prev-char \=) (= (get s (- i 2)) \=))   ; ==>
+                                         (and (= prev-char \-) (= (get s (- i 2)) \-)))) ; -->
+                   new-nesting (cond
+                                 (or (= ch \<) (= ch \() (= ch \[)) (inc nesting)
+                                 (and (= ch \>) (not is-copula-gt?)) (dec nesting)  ; Only decrement if NOT part of copula
+                                 (or (= ch \)) (= ch \])) (dec nesting)
+                                 :else nesting)]
+               (recur (inc i) new-nesting))))))
+     patterns)))
 
 (defn parse-term
   "Parse a term from string.
@@ -142,37 +298,41 @@
   - Sequence: '(a &/ b)'
   - Implication: '<a =/> b>'
 
-  For now, simple regex-based parsing. Will be enhanced later."
+  Uses proper nesting-aware parsing to handle complex nested terms."
   [s]
   (let [s (clojure.string/trim s)]
     (cond
-      ;; Inheritance: <subject --> predicate>
-      (re-matches #"<(.+)\s+-->\s+(.+)>" s)
-      (let [[_ subj pred] (re-matches #"<(.+)\s+-->\s+(.+)>" s)]
-        (make-compound-term copula-inheritance
-                            (parse-term subj)
-                            (parse-term pred)))
+      ;; Compound term enclosed in < >
+      (and (str/starts-with? s "<")
+           (str/ends-with? s ">"))
+      (let [inner (subs s 1 (dec (count s)))
+            copula-info (find-main-copula inner)]
+        (if copula-info
+          (let [[copula start end] copula-info
+                subj (subs inner 0 start)
+                pred (subs inner end)
+                subj-parsed (parse-term (str/trim subj))
+                pred-parsed (parse-term (str/trim pred))]
+            (case copula
+              "-->" (make-compound-term copula-inheritance subj-parsed pred-parsed)
+              "=/>" (make-compound-term copula-temporal-implication subj-parsed pred-parsed)
+              "==>" (make-compound-term copula-implication subj-parsed pred-parsed)
+              (make-atomic-term s)))  ; Unknown copula
+          (make-atomic-term s)))  ; No copula found
 
-      ;; Temporal implication: <subject =/> predicate>
-      (re-matches #"<(.+)\s+=/>\s+(.+)>" s)
-      (let [[_ subj pred] (re-matches #"<(.+)\s+=/>\s+(.+)>" s)]
-        (make-compound-term copula-temporal-implication
-                            (parse-term subj)
-                            (parse-term pred)))
-
-      ;; Regular implication: <subject ==> predicate>
-      (re-matches #"<(.+)\s+==>\s+(.+)>" s)
-      (let [[_ subj pred] (re-matches #"<(.+)\s+==>\s+(.+)>" s)]
-        (make-compound-term copula-implication
-                            (parse-term subj)
-                            (parse-term pred)))
-
-      ;; Sequence: (subject &/ predicate)
-      (re-matches #"\((.+)\s+&/\s+(.+)\)" s)
-      (let [[_ subj pred] (re-matches #"\((.+)\s+&/\s+(.+)\)" s)]
-        (make-compound-term copula-sequence
-                            (parse-term subj)
-                            (parse-term pred)))
+      ;; Sequence enclosed in ( )
+      (and (str/starts-with? s "(")
+           (str/ends-with? s ")"))
+      (let [inner (subs s 1 (dec (count s)))
+            copula-info (find-main-copula inner)]
+        (if (and copula-info (= "&/" (first copula-info)))
+          (let [[copula start end] copula-info
+                subj (subs inner 0 start)
+                pred (subs inner end)
+                subj-parsed (parse-term (str/trim subj))
+                pred-parsed (parse-term (str/trim pred))]
+            (make-compound-term copula-sequence subj-parsed pred-parsed))
+          (make-atomic-term s)))  ; No sequence copula found
 
       ;; Atomic term
       :else

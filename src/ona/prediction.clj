@@ -78,7 +78,7 @@
      ;; Times must be close
      (if (event/eternal? predicted-event)
        true  ; Eternal predictions always match timing
-       (<= (Math/abs (- observed-time predicted-time))
+       (<= (abs (- observed-time predicted-time))
            time-tolerance)))))
 
 (defn prediction-truth-match?
@@ -96,8 +96,8 @@
   [prediction observed-event frequency-tolerance]
   (let [predicted-truth (:truth (:predicted-event prediction))
         observed-truth (:truth observed-event)
-        freq-diff (Math/abs (- (:frequency predicted-truth)
-                              (:frequency observed-truth)))]
+        freq-diff (abs (- (:frequency predicted-truth)
+                          (:frequency observed-truth)))]
     (<= freq-diff frequency-tolerance)))
 
 ;; =============================================================================

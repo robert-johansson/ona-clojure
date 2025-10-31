@@ -1,0 +1,91 @@
+// Level 5: Three Operations Discrimination Test
+// Success Criteria: 60%+ correct three-way discrimination
+//
+// Task: Learn three distinct stimulus-response patterns
+// Pattern 1: red → ^left → G
+// Pattern 2: blue → ^right → G
+// Pattern 3: green → ^forward → G
+
+*volume=100
+*setopname 1 ^left
+*setopname 2 ^right
+*setopname 3 ^forward
+
+// === LEARNING PHASE ===
+
+// Teach Pattern 1: red → ^left → G
+red. :|:
+10
+^left. :|:
+10
+<goal --> achieved>. :|:
+100
+
+// Teach Pattern 2: blue → ^right → G
+blue. :|:
+10
+^right. :|:
+10
+<goal --> achieved>. :|:
+100
+
+// Teach Pattern 3: green → ^forward → G
+green. :|:
+10
+^forward. :|:
+10
+<goal --> achieved>. :|:
+100
+
+// === TESTING PHASE ===
+
+// Test 1: red → ^left
+red. :|:
+1
+<goal --> achieved>! :|:
+1
+
+// Wait
+100
+
+// Test 2: blue → ^right
+blue. :|:
+1
+<goal --> achieved>! :|:
+1
+
+// Wait
+100
+
+// Test 3: green → ^forward
+green. :|:
+1
+<goal --> achieved>! :|:
+1
+
+// Wait
+100
+
+// Test 4: red again
+red. :|:
+1
+<goal --> achieved>! :|:
+1
+
+// Wait
+100
+
+// Test 5: blue again
+blue. :|:
+1
+<goal --> achieved>! :|:
+1
+
+// Wait
+100
+
+// Test 6: green again
+green. :|:
+1
+<goal --> achieved>! :|:
+1

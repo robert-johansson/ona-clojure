@@ -1,0 +1,70 @@
+// Level 3: Compound Conditions Test
+// Success Criteria: 60%+ correct execution with compound contexts
+//
+// Task: Learn that action depends on BOTH conditions being true
+// Pattern 1: (red & bright) → ^left → G
+// Pattern 2: (blue & bright) → ^right → G
+//
+// This tests context sensitivity with multiple simultaneous inputs
+
+*volume=100
+*setopname 1 ^left
+*setopname 2 ^right
+
+// === LEARNING PHASE ===
+
+// Teach Pattern 1: (red & bright) → ^left → G
+red. :|:
+bright. :|:
+5
+^left. :|:
+10
+<goal --> achieved>. :|:
+100
+
+// Teach Pattern 2: (blue & bright) → ^right → G
+blue. :|:
+bright. :|:
+5
+^right. :|:
+10
+<goal --> achieved>. :|:
+100
+
+// === TESTING PHASE ===
+
+// Test 1: red & bright → should trigger ^left
+red. :|:
+bright. :|:
+2
+<goal --> achieved>! :|:
+1
+
+// Wait
+100
+
+// Test 2: blue & bright → should trigger ^right
+blue. :|:
+bright. :|:
+2
+<goal --> achieved>! :|:
+1
+
+// Wait
+100
+
+// Test 3: red alone (no bright) → should NOT execute (or random)
+red. :|:
+2
+<goal --> achieved>! :|:
+1
+
+// Wait
+100
+
+// Test 4: red & bright again → should trigger ^left
+red. :|:
+bright. :|:
+2
+<goal --> achieved>! :|:
+1

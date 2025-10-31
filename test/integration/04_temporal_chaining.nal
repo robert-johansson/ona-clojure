@@ -1,0 +1,40 @@
+// Level 4: Temporal Chaining Test
+// Success Criteria: 60%+ correct temporal sequences
+//
+// Task: Learn temporal implications where timing matters
+// Pattern 1: A predicts B will happen soon
+// Pattern 2: B predicts C will happen soon
+// Test: Does A predict C through the chain?
+
+*volume=100
+
+// === LEARNING PHASE ===
+
+// Teach: A happens, then B happens
+stimulus_A. :|:
+10
+stimulus_B. :|:
+100
+
+// Teach: B happens, then C happens
+stimulus_B. :|:
+10
+stimulus_C. :|:
+100
+
+// === TESTING PHASE ===
+
+// Query: Does A predict B?
+<stimulus_A =/> stimulus_B>?
+
+// Wait
+10
+
+// Query: Does B predict C?
+<stimulus_B =/> stimulus_C>?
+
+// Wait
+10
+
+// Check concepts to see what was learned
+*concepts

@@ -108,8 +108,9 @@
   (let [related-terms (related-concepts state event-term)]
     (into {}
           (keep (fn [term]
-                  (when-let [concept (get-in state [:concepts term])]
-                    [term concept]))
+                  (let [key (core/get-concept-key term)]
+                    (when-let [concept (get-in state [:concepts key])]
+                      [term concept])))
                 related-terms))))
 
 ;; =============================================================================
@@ -130,14 +131,15 @@
   ([state term current-time]
    (find-recent-events state term current-time 20))
   ([state term current-time time-window]
-   (if-let [concept (get-in state [:concepts term])]
-     (let [spike (:belief-spike concept)]
-       (if (and spike
-                (not (event/eternal? spike))
-                (<= (- current-time (:occurrence-time spike)) time-window))
-         [spike]
-         []))
-     [])))
+   (let [key (core/get-concept-key term)]
+     (if-let [concept (get-in state [:concepts key])]
+       (let [spike (:belief-spike concept)]
+         (if (and spike
+                  (not (event/eternal? spike))
+                  (<= (- current-time (:occurrence-time spike)) time-window))
+           [spike]
+           []))
+       []))))
 
 (defn mine-temporal-sequences
   "Mine temporal sequences from a new event and recent history.
@@ -234,7 +236,28 @@
                                      (when impl-success? impl)))
                                  recent-sequences)
 
-          implications (filterv some? (concat individual-implications sequence-implications))]
+          ;; SENSORIMOTOR IMPLICATIONS: Form implications from sequences containing operations
+          ;; When a sequence like ((A &/ B) &/ ^op) is followed by new-event C,
+          ;; we want to form: <((A &/ B) &/ ^op) =/> C>
+          ;; These are critical for decision-making (selecting operations based on goals)
+          sensorimotor-implications (keep
+                                     (fn [seq-event]
+                                       (let [seq-term (:term seq-event)]
+                                         ;; Check if this sequence contains an operation
+                                         (when (term/sequence-contains-operation? seq-term)
+                                           ;; Form implication from this sensorimotor sequence to new-event
+                                           (let [[impl-success? impl]
+                                                 (inference/belief-induction seq-event new-event
+                                                                             current-time
+                                                                             projection-decay)]
+                                             (when impl-success?
+                                               ;; Mark this as a sensorimotor implication for decision-making
+                                               (assoc impl :sensorimotor? true))))))
+                                     recent-sequences)
+
+          implications (filterv some? (concat individual-implications
+                                              sequence-implications
+                                              sensorimotor-implications))]
 
       [sequences implications])))
 
@@ -257,6 +280,8 @@
 (defn store-derived-implication
   "Store a derived implication in the appropriate concept.
 
+  C ONA stores implications in the POSTCONDITION concept for goal-driven search.
+
   Args:
     state - Current NAR state
     impl - Implication to store
@@ -264,8 +289,7 @@
   Returns:
     Updated state"
   [state impl]
-  (let [precondition-term (term/get-subject (:term impl))]
-    (core/add-implication state impl precondition-term)))
+  (core/add-implication state impl))
 
 ;; =============================================================================
 ;; Forward Chaining (Belief Deduction)
@@ -331,6 +355,7 @@
                     ;; Store prediction in postcondition concept
                     (let [postcondition-term (:term predicted-event)
                           [state postcondition-concept] (core/get-concept state postcondition-term)
+                          postcondition-key (core/get-concept-key postcondition-term)
 
                           ;; Create Prediction record for validation
                           pred (prediction/make-prediction predicted-event
@@ -344,7 +369,7 @@
                                               (assoc :active-prediction pred)
                                               (update :use-count inc)
                                               (assoc :last-used current-time))]
-                      (assoc-in state [:concepts postcondition-term] updated-concept))
+                      (assoc-in state [:concepts postcondition-key] updated-concept))
                     state))
                 ;; Unification failed - skip this implication
                 state)))
@@ -372,7 +397,8 @@
     Updated state with revised implications"
   [state belief-event current-time]
   (let [event-term (:term belief-event)
-        concept (get-in state [:concepts event-term])]
+        event-key (core/get-concept-key event-term)
+        concept (get-in state [:concepts event-key])]
 
     (if (and concept (:active-prediction concept))
       (let [active-pred (:active-prediction concept)
@@ -390,6 +416,7 @@
           :confirmed
           (let [source-impl (:source-implication active-pred)
                 source-term (:source-concept-term active-pred)
+                source-key (core/get-concept-key source-term)
                 pred-event (:predicted-event active-pred)
 
                 ;; Revise implication on confirmation
@@ -400,7 +427,7 @@
                              current-time)
 
                 ;; Update source concept's implication
-                source-concept (get-in state [:concepts source-term])
+                source-concept (get-in state [:concepts source-key])
                 impl-term (:term source-impl)
                 updated-source (assoc-in source-concept
                                         [:implications impl-term]
@@ -414,13 +441,14 @@
 
             ;; Update both concepts
             (-> state
-                (assoc-in [:concepts source-term] updated-source)
-                (assoc-in [:concepts event-term] updated-concept)))
+                (assoc-in [:concepts source-key] updated-source)
+                (assoc-in [:concepts event-key] updated-concept)))
 
           ;; Prediction refuted - weaken implication
           :refuted
           (let [source-impl (:source-implication active-pred)
                 source-term (:source-concept-term active-pred)
+                source-key (core/get-concept-key source-term)
                 pred-event (:predicted-event active-pred)
 
                 ;; Revise implication on refutation
@@ -431,7 +459,7 @@
                              current-time)
 
                 ;; Update source concept's implication
-                source-concept (get-in state [:concepts source-term])
+                source-concept (get-in state [:concepts source-key])
                 impl-term (:term source-impl)
                 updated-source (assoc-in source-concept
                                         [:implications impl-term]
@@ -445,8 +473,8 @@
 
             ;; Update both concepts
             (-> state
-                (assoc-in [:concepts source-term] updated-source)
-                (assoc-in [:concepts event-term] updated-concept)))
+                (assoc-in [:concepts source-key] updated-source)
+                (assoc-in [:concepts event-key] updated-concept)))
 
           ;; Otherwise (pending, timeout, already-resolved): no change
           state))
@@ -541,11 +569,26 @@
   Returns:
     Updated state"
   [state selected-goals]
-  (let [current-time (:current-time state)]
+  (let [current-time (:current-time state)
+        volume (:volume state)]
+    ;; DEBUG: Show which goals are being processed
+    (when (and (= volume 100) (seq selected-goals))
+      (println (str "^debug[process-goal-events]: Processing " (count selected-goals) " goal(s)"))
+      (doseq [g selected-goals]
+        (println (str "^debug[process-goal-events]:   Goal: " (term/format-term (:term g))))))
+
     (reduce
      (fn [state goal]
        ;; Suggest decision for this goal
        (let [dec (decision/suggest-decision state goal current-time)]
+         ;; DEBUG: Show decision result
+         (when (= volume 100)
+           (println (str "^debug[process-goal-events]: Decision for " (term/format-term (:term goal))))
+           (println (str "^debug[process-goal-events]:   Desire: " (format "%.3f" (:desire dec))))
+           (println (str "^debug[process-goal-events]:   Execute?: " (:execute? dec)))
+           (when (:operation-term dec)
+             (println (str "^debug[process-goal-events]:   Operation: " (term/format-term (:operation-term dec))))))
+
          (if (:execute? dec)
            ;; High desire - try to execute operation
            (let [[executed? exec-event state] (try-execute-operation state dec)]

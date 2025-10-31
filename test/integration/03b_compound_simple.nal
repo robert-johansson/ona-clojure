@@ -1,0 +1,46 @@
+*volume=100
+*setopname 1 ^left
+*setopname 2 ^right
+
+// === LEARNING PHASE ===
+
+// Pattern 1: (red & bright) → ^left → goal achieved
+red. :|:
+bright. :|:
+5
+^left. :|:
+10
+<goal --> achieved>. :|:
+100
+
+// Pattern 2: (blue & bright) → ^right → goal achieved
+blue. :|:
+bright. :|:
+5
+^right. :|:
+10
+<goal --> achieved>. :|:
+100
+
+// === TESTING PHASE ===
+
+// Test 1: (red & bright) + goal → EXPECT ^left
+red. :|:
+bright. :|:
+1
+<goal --> achieved>! :|:
+50
+
+// Test 2: (blue & bright) + goal → EXPECT ^right (THIS IS THE CRITICAL TEST!)
+blue. :|:
+bright. :|:
+1
+<goal --> achieved>! :|:
+50
+
+// Test 3: (red & bright) again → EXPECT ^left
+red. :|:
+bright. :|:
+1
+<goal --> achieved>! :|:
+50

@@ -3,7 +3,9 @@
    Based on C ONA NAR.c query handling (lines 135-283)."
   (:require [ona.term :as term]
             [ona.truth :as truth]
-            [ona.event :as event]))
+            [ona.event :as event]
+            [ona.variable :as var]
+            [clojure.string :as str]))
 
 ;; =============================================================================
 ;; Answer Records
@@ -32,10 +34,14 @@
 ;; =============================================================================
 
 (defn search-belief-answer
-  "Search a concept for a belief matching the query term"
+  "Search a concept for a belief matching the query term.
+   Also handles querying for implications: if query-term is an implication <A =/> B>,
+   looks for that implication in the concept for A."
   [concept query-term]
-  (let [{:keys [term belief belief-spike predicted-belief]} concept]
-    (when (= term query-term)
+  (let [{:keys [term belief belief-spike predicted-belief implications]} concept]
+    (cond
+      ;; Direct term match - return belief
+      (= term query-term)
       (let [;; Prefer spike, then predicted, then eternal belief
             answer-event (or belief-spike predicted-belief belief)]
         (when answer-event
@@ -46,21 +52,62 @@
             (make-answer term
                         (:truth answer-event)
                         source-type
-                        term)))))))
+                        term))))
+
+      ;; Query is an implication <A =/> B> - check if this concept (A) has that implication
+      (and (= (:type query-term) :compound)
+           (or (= (:copula query-term) "=/>")   ; Temporal implication
+               (= (:copula query-term) "==>")))
+      (let [query-precondition (:subject query-term)
+            query-postcondition (:predicate query-term)]
+        ;; Check if this concept's term matches the query precondition
+        (when (= term query-precondition)
+          ;; Look through this concept's implications for a matching one
+          (->> (vals implications)
+               (filter (fn [impl]
+                         (= (:predicate (:term impl)) query-postcondition)))
+               (first)  ; Return first match
+               (#(when %
+                   (make-answer (:term %)
+                               (:truth %)
+                               :implication
+                               term))))))
+
+      ;; No match
+      :else
+      nil)))
 
 (defn search-implication-answer
-  "Search a concept for implications matching the query term"
+  "Search a concept for implications matching the query term.
+
+   Uses variable unification to match query patterns with stored implications.
+   For example, query '<((A &/ B) &/ ^left) =/> G>?' can match:
+   - Exact: '<((A &/ B) &/ ^left) =/> G>'
+   - With variables: '<(($1 &/ $2) &/ ^left) =/> G>'
+
+   Args:
+     concept - Concept to search
+     query-term - Query term (may contain variables)
+
+   Returns:
+     Sequence of Answer records for matching implications"
   [concept query-term]
   (let [{:keys [term implications]} concept]
-    ;; Check if any implications have a term matching the query
+    ;; Check if any implications unify with the query
     (when (seq implications)
       (->> (vals implications)
-           (filter #(= (:term %) query-term))
-           (map (fn [impl]
-                  (make-answer (:term impl)
-                              (:truth impl)
-                              :implication
-                              term)))
+           (keep (fn [impl]
+                   ;; Try to unify impl-term with query-term
+                   ;; In C ONA: Variable_Unify(&impl_postcondition, &query_term)
+                   (let [impl-term (:term impl)
+                         ;; Try unification: impl-term (may have variables) matches query-term
+                         substitution (var/unify impl-term query-term)]
+                     (when (:success substitution)
+                       ;; Unification succeeded - return answer with impl's truth value
+                       (make-answer impl-term
+                                   (:truth impl)
+                                   :implication
+                                   term)))))
            (seq)))))
 
 (defn search-all-concepts
@@ -141,6 +188,4 @@
   [answer]
   (str (term/format-term (:term answer))
        ". "
-       (truth/format-truth (:truth answer))
-       " (from " (name (:source-type answer))
-       " in " (term/format-term (:source-concept answer)) ")"))
+       (truth/format-truth-verbose (:truth answer))))

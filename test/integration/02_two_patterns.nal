@@ -1,0 +1,63 @@
+// Level 2: Two Pattern Discrimination Test
+// Success Criteria: 70%+ correct discrimination
+//
+// Task: Learn two distinct stimulus-response patterns
+// Pattern 1: A → ^left → G
+// Pattern 2: B → ^right → G
+
+*volume=100
+*setopname 1 ^left
+*setopname 2 ^right
+
+// === LEARNING PHASE ===
+
+// Teach Pattern 1: A → ^left → G
+<context --> A>. :|:
+10
+^left. :|:
+10
+<goal --> achieved>. :|:
+100
+
+// Teach Pattern 2: B → ^right → G
+<context --> B>. :|:
+10
+^right. :|:
+10
+<goal --> achieved>. :|:
+100
+
+// === TESTING PHASE ===
+
+// Test 1: A should trigger ^left
+<context --> A>. :|:
+1
+<goal --> achieved>! :|:
+1
+
+// Wait between tests
+100
+
+// Test 2: B should trigger ^right
+<context --> B>. :|:
+1
+<goal --> achieved>! :|:
+1
+
+// Wait
+100
+
+// Test 3: A again
+<context --> A>. :|:
+1
+<goal --> achieved>! :|:
+1
+
+// Wait
+100
+
+// Test 4: B again
+<context --> B>. :|:
+1
+<goal --> achieved>! :|:
+1

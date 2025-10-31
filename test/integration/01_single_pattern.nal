@@ -1,0 +1,27 @@
+// Level 1: Single Pattern Learning Test
+// Success Criteria: 80%+ correct execution
+//
+// Task: Learn that context A leads to goal G via operation ^left
+// Then when A is observed and G is desired, execute ^left
+
+*volume=100
+*setopname 1 ^left
+
+// === LEARNING PHASE ===
+// Teach: A → ^left → G
+
+<context --> A>. :|:
+10
+^left. :|:
+10
+<goal --> achieved>. :|:
+100
+
+// === TESTING PHASE ===
+// Present context A and desire goal G
+// System should execute ^left
+
+<context --> A>. :|:
+1
+<goal --> achieved>! :|:
+1

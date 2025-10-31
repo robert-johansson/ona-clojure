@@ -76,14 +76,40 @@
 ;; Concept Operations
 ;; =============================================================================
 
+(defn get-concept-key
+  "Get the key to use for indexing a concept.
+
+  For atomic terms: return the term itself
+  For inheritance (<A --> B>): return the subject A
+  For other compounds: return the term itself
+
+  This aligns with C ONA's architecture where concepts are indexed by
+  atomic terms, and inheritance statements store beliefs on the subject's concept.
+
+  Examples:
+  - 'context' → 'context' (atomic)
+  - '<context --> present>' → 'context' (subject of inheritance)
+  - '(A &/ B)' → '(A &/ B)' (other compound)"
+  [term]
+  (if (and (term/compound-term? term)
+           (= (:copula term) term/copula-inheritance))
+    ;; Inheritance: use subject as key
+    (:subject term)
+    ;; All others: use term itself
+    term))
+
 (defn get-concept
-  "Get concept by term, creating if necessary"
+  "Get concept by term, creating if necessary.
+
+  Uses get-concept-key to determine the proper indexing key.
+  For inheritance terms like <A --> B>, this indexes by the subject A."
   [state term]
-  (if-let [concept (get-in state [:concepts term])]
-    [state concept]
-    (let [new-concept (make-concept term)
-          new-state (assoc-in state [:concepts term] new-concept)]
-      [new-state new-concept])))
+  (let [key (get-concept-key term)]
+    (if-let [concept (get-in state [:concepts key])]
+      [state concept]
+      (let [new-concept (make-concept key)
+            new-state (assoc-in state [:concepts key] new-concept)]
+        [new-state new-concept]))))
 
 (defn update-concept-belief
   "Update concept with a new belief event.
@@ -144,8 +170,9 @@
 
         ;; Get or create concept and update it
         [state concept] (get-concept state term)
+        concept-key (get-concept-key term)  ; Use proper key for storage
         updated-concept (update-concept-belief concept event current-time)
-        state (assoc-in state [:concepts term] updated-concept)
+        state (assoc-in state [:concepts concept-key] updated-concept)
 
         ;; Add to appropriate queue with priority
         priority (event/event-priority event)
@@ -219,20 +246,26 @@
 (defn add-implication
   "Add an implication to a concept's implication table.
 
-  In C ONA, implications are stored in precondition_beliefs tables indexed by
-  operation ID. For now, we use a simple map keyed by implication term.
+  CRITICAL: C ONA stores implications in the POSTCONDITION (goal) concept!
+  For implication <A =/> G>, store it in concept G (not A).
+
+  This enables goal-driven decision making:
+  When goal G! is input, system finds all implications <? =/> G>
+  by looking in concept G's implication table.
 
   If an implication with the same term already exists, revise them together.
 
   Args:
     state - Current NAR state
     impl - Implication to add
-    precondition-term - Term of the precondition (subject of implication)
 
   Returns:
     Updated state"
-  [state impl precondition-term]
-  (let [[state concept] (get-concept state precondition-term)
+  [state impl]
+  (let [;; Extract postcondition (goal) from implication <A =/> B> → B
+        postcondition-term (implication/get-postcondition impl)
+        [state concept] (get-concept state postcondition-term)
+        concept-key (get-concept-key postcondition-term)  ; Use proper key for storage
         impl-term (:term impl)
         existing-impl (get-in concept [:implications impl-term])
 
@@ -247,7 +280,7 @@
                             (update :use-count inc)
                             (assoc :last-used (:current-time state)))]
 
-    (assoc-in state [:concepts precondition-term] updated-concept)))
+    (assoc-in state [:concepts concept-key] updated-concept)))
 
 (defn get-implications
   "Get all implications from a concept.
@@ -259,9 +292,10 @@
   Returns:
     Vector of implications (or empty vector if concept doesn't exist)"
   [state term]
-  (if-let [concept (get-in state [:concepts term])]
-    (vec (vals (:implications concept)))
-    []))
+  (let [key (get-concept-key term)]
+    (if-let [concept (get-in state [:concepts key])]
+      (vec (vals (:implications concept)))
+      [])))
 
 (defn get-implication
   "Get a specific implication from a concept.
@@ -274,7 +308,8 @@
   Returns:
     Implication or nil if not found"
   [state precondition-term implication-term]
-  (get-in state [:concepts precondition-term :implications implication-term]))
+  (let [key (get-concept-key precondition-term)]
+    (get-in state [:concepts key :implications implication-term])))
 
 ;; =============================================================================
 ;; Statistics
