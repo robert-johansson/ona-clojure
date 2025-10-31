@@ -92,6 +92,25 @@
     ;; Store in operations map keyed by term
     (assoc-in state [:operations op-term] operation)))
 
+(defn get-operation-id
+  "Get operation ID by term.
+
+  Matches C ONA Memory_getOperationID behavior:
+  - Returns 1..10 for registered operations
+  - Returns nil if operation not found
+
+  Reference: Memory.c:244-257
+
+  Args:
+    state - NAR state with :operations map
+    op-term - Operation term (e.g., ^left)
+
+  Returns:
+    Integer ID (1-10) or nil"
+  [state op-term]
+  (when-let [op (get-in state [:operations op-term])]
+    (:id op)))
+
 (defn get-operation-by-term
   "Get an operation by its term.
 

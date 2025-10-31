@@ -232,14 +232,18 @@
       (println (str "^debug[find-matching-implications]: Scanning " (count all-concepts) " concepts")))
 
     ;; Scan all concepts for implications
+    ;; CRITICAL: Only scan operation tables 1-10 (procedural), skip table 0 (declarative)
+    ;; Matches C ONA: for(int opi=1; opi<=OPERATIONS_MAX; opi++) (Decision.c:423-477)
     (let [results
           (for [concept all-concepts
-                :let [concept-term (:term concept)
-                      impls (vals (:implications concept))]
-                :when (seq impls)  ; Only process concepts with implications
+                :let [concept-term (:term concept)]
+                opi (range 1 11)  ; Tables 1-10 ONLY, skip 0
+                :let [impl-table (nth (:precondition-beliefs concept) opi)
+                      impls (vals impl-table)]
+                :when (seq impls)  ; Only process if table has implications
                 :let [_ (when (= volume 100)
                           (println (str "^debug[find-matching-implications]:   Concept " (term/format-term concept-term)
-                                       " has " (count impls) " implications")))]
+                                       " table[" opi "] has " (count impls) " implications")))]
                 impl impls
                 :let [postcondition (implication/get-postcondition impl)
                       _ (when (= volume 100)
@@ -519,14 +523,15 @@
         ;; Revise existing implication with negative evidence
         concept-key (core/get-concept-key concept-term)
         impl-term (:term impl)
+        opi (core/get-operation-index impl-term state)
 
-        existing-impl (get-in state [:concepts concept-key :implications impl-term])
+        existing-impl (get-in state [:concepts concept-key :precondition-beliefs opi impl-term])
         revised-impl (if existing-impl
                       (implication/revise-implication existing-impl negative-impl)
                       negative-impl)]
 
-    ;; Update state with revised implication
-    (assoc-in state [:concepts concept-key :implications impl-term] revised-impl)))
+    ;; Update state with revised implication in operation-indexed table
+    (assoc-in state [:concepts concept-key :precondition-beliefs opi impl-term] revised-impl)))
 
 (defn check-anticipations
   "Check if anticipations were satisfied or failed.

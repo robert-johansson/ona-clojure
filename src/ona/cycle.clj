@@ -331,7 +331,8 @@
     ;; Process implications from ALL related concepts
     (reduce-kv
      (fn [state concept-term concept]
-       (let [implications (vals (:implications concept))]
+       ;; Get implications from ALL tables (0-10) for belief processing
+       (let [implications (mapcat vals (:precondition-beliefs concept))]
          ;; Try each implication
          (reduce
           (fn [state impl]
@@ -426,11 +427,12 @@
                              belief-event
                              current-time)
 
-                ;; Update source concept's implication
+                ;; Update source concept's implication in operation-indexed table
                 source-concept (get-in state [:concepts source-key])
                 impl-term (:term source-impl)
+                opi (core/get-operation-index impl-term state)
                 updated-source (assoc-in source-concept
-                                        [:implications impl-term]
+                                        [:precondition-beliefs opi impl-term]
                                         revised-impl)
 
                 ;; Clear prediction from current concept
@@ -458,11 +460,12 @@
                              belief-event
                              current-time)
 
-                ;; Update source concept's implication
+                ;; Update source concept's implication in operation-indexed table
                 source-concept (get-in state [:concepts source-key])
                 impl-term (:term source-impl)
+                opi (core/get-operation-index impl-term state)
                 updated-source (assoc-in source-concept
-                                        [:implications impl-term]
+                                        [:precondition-beliefs opi impl-term]
                                         revised-impl)
 
                 ;; Clear prediction from current concept

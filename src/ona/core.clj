@@ -4,6 +4,7 @@
             [ona.truth :as truth]
             [ona.event :as event]
             [ona.implication :as implication]
+            [ona.operation :as operation]
             [ona.config :as config]
             [clojure.data.priority-map :refer [priority-map]]))
 
@@ -12,20 +13,27 @@
 ;; =============================================================================
 
 (defrecord Concept
-  [term               ; Term - the concept's identifier
-   priority           ; double - attention priority
-   usefulness         ; double - long-term usefulness
-   use-count          ; long - number of times used
-   last-used          ; long - last usage time
-   belief             ; Event - best eternal belief
-   belief-spike       ; Event - most recent belief event
-   predicted-belief   ; Event - predicted belief (from forward chaining)
-   active-prediction  ; Prediction - current prediction awaiting validation
-   implications       ; Map of implications
+  [term                  ; Term - the concept's identifier
+   priority              ; double - attention priority
+   usefulness            ; double - long-term usefulness
+   use-count             ; long - number of times used
+   last-used             ; long - last usage time
+   belief                ; Event - best eternal belief
+   belief-spike          ; Event - most recent belief event
+   predicted-belief      ; Event - predicted belief (from forward chaining)
+   active-prediction     ; Prediction - current prediction awaiting validation
+   precondition-beliefs  ; Vector[11] of Maps - operation-indexed implication tables
+   implication-links     ; Map - non-operational implications
    ])
 
 (defn make-concept
-  "Create a new concept with default values"
+  "Create a new concept with default values.
+
+  Initializes precondition-beliefs as vector of 11 empty maps:
+  - Index 0: Declarative temporal implications (no operation)
+  - Index 1-10: Procedural implications per registered operation
+
+  Matches C ONA Concept.precondition_beliefs[OPERATIONS_MAX+1]"
   [term]
   (map->Concept
    {:term term
@@ -37,7 +45,36 @@
     :belief-spike nil
     :predicted-belief nil
     :active-prediction nil
-    :implications {}}))
+    :precondition-beliefs (vec (repeat 11 {}))  ; 11 empty maps (indices 0-10)
+    :implication-links {}}))
+
+(defn get-operation-index
+  "Determine which precondition_beliefs table to use for implication.
+
+  Follows C ONA logic (Memory.c:298-320):
+  - Extract subject from <subject =/> predicate>
+  - If subject is sequence, check rightmost term
+  - If rightmost is operation, get its ID (1-10)
+  - Otherwise return 0 (declarative temporal)
+
+  Args:
+    impl-term - Implication term
+    state - NAR state (for operation lookup)
+
+  Returns:
+    Integer 0-10:
+    - 0 = no operation (declarative)
+    - 1-10 = operation ID (procedural)"
+  [impl-term state]
+  (let [subject (term/get-subject impl-term)]
+    (if (term/sequence? subject)
+      ;; Check rightmost term in sequence (predicate is rightmost in binary tree)
+      (let [rightmost (:predicate subject)]
+        (if (term/operation-term? rightmost)
+          ;; Look up operation ID
+          (or (operation/get-operation-id state rightmost) 0)
+          0))
+      0)))
 
 ;; =============================================================================
 ;; NAR State
@@ -267,15 +304,20 @@
         [state concept] (get-concept state postcondition-term)
         concept-key (get-concept-key postcondition-term)  ; Use proper key for storage
         impl-term (:term impl)
-        existing-impl (get-in concept [:implications impl-term])
+
+        ;; NEW: Determine operation index (0-10) following C ONA Memory.c:298-328
+        opi (get-operation-index impl-term state)
+
+        ;; Check for existing implication in operation-indexed table
+        existing-impl (get-in concept [:precondition-beliefs opi impl-term])
 
         ;; Revise if exists, otherwise add new
         final-impl (if existing-impl
                      (implication/revise-implication existing-impl impl)
                      impl)
 
-        ;; Update concept
-        updated-concept (assoc-in concept [:implications impl-term] final-impl)
+        ;; Update concept - store in operation-indexed table
+        updated-concept (assoc-in concept [:precondition-beliefs opi impl-term] final-impl)
         updated-concept (-> updated-concept
                             (update :use-count inc)
                             (assoc :last-used (:current-time state)))]
@@ -284,6 +326,9 @@
 
 (defn get-implications
   "Get all implications from a concept.
+
+  Returns implications from ALL tables (0-10) for completeness.
+  Use this for queries and display, NOT for decision-making.
 
   Args:
     state - Current NAR state
@@ -294,11 +339,13 @@
   [state term]
   (let [key (get-concept-key term)]
     (if-let [concept (get-in state [:concepts key])]
-      (vec (vals (:implications concept)))
+      (vec (mapcat vals (:precondition-beliefs concept)))
       [])))
 
 (defn get-implication
   "Get a specific implication from a concept.
+
+  Must search all tables (0-10) since we don't know which table it's in.
 
   Args:
     state - Current NAR state
@@ -309,7 +356,10 @@
     Implication or nil if not found"
   [state precondition-term implication-term]
   (let [key (get-concept-key precondition-term)]
-    (get-in state [:concepts key :implications implication-term])))
+    ;; Search all 11 tables (0-10)
+    (some (fn [table-idx]
+            (get-in state [:concepts key :precondition-beliefs table-idx implication-term]))
+          (range 11))))
 
 ;; =============================================================================
 ;; Statistics
