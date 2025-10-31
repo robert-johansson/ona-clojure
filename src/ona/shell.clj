@@ -9,7 +9,8 @@
             [ona.cycle :as cycle]
             [ona.query :as query]
             [ona.operation :as operation]
-            [clojure.string :as str]))
+            [clojure.string :as str])
+  (:gen-class))
 
 ;; =============================================================================
 ;; Output Functions

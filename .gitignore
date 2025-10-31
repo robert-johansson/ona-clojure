@@ -10,12 +10,23 @@ pom.xml.asc
 *.jar
 *.class
 
+# GraalVM Native Image
+ona
+ona.exe
+*.so
+*.dylib
+*.dll
+graal_isolate.h
+graal_isolate_dynamic.h
+reports/
+
 # Development notes (keep local)
 *_IMPLEMENTATION.md
 PROJECT_SUMMARY.md
 
-# Incomplete Python interface
-misc/python/
+# Python environment
+misc/python/venv/
+misc/python/__pycache__/
 
 # Editor files
 *.swp

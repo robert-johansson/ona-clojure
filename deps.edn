@@ -23,4 +23,10 @@
 
   :build
   {:deps {io.github.clojure/tools.build {:git/tag "v0.9.4" :git/sha "76b78fe"}}
-   :ns-default build}}}
+   :ns-default build}
+
+  :native
+  {:extra-deps {org.clojure/clojure {:mvn/version "1.11.1"}}
+   :jvm-opts ["-Dclojure.compiler.direct-linking=true"
+              "-Dclojure.spec.skip-macros=true"]
+   :main-opts ["-m" "ona.shell"]}}}
