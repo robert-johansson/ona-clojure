@@ -55,6 +55,51 @@ python3 basic_example_native.py
 
 ---
 
+### 4. **simple_learning_demo.py** ✅ EDUCATIONAL
+Clear example of sensorimotor learning.
+
+```bash
+python3 simple_learning_demo.py
+```
+
+**Demonstrates:**
+- Single sequence learning: sensor → action → outcome
+- Goal-driven action selection
+- Sample-efficient learning (5 trials)
+
+**Output:**
+```
+✓✓✓ SUCCESS!
+The system autonomously decided to press the button!
+```
+
+---
+
+## 🔬 Experimental Examples
+
+These examples explore ONA's capabilities and limitations:
+
+### **discrimination_learning.py** / **discrimination_learning_v2.py** ⚠️ RESEARCH
+
+Attempts to train context-dependent action selection:
+- Context A → ^left → goal
+- Context B → ^right → goal
+
+```bash
+python3 discrimination_learning.py
+```
+
+**Status:** Partial - reveals current limitation in ONA's decision mechanism
+
+**Finding:** The system successfully learns individual implications (A→left→G and B→right→G) but when testing, it doesn't properly check which precondition context (A vs B) is currently active. Instead, it consistently chooses whichever implication has higher priority/recency.
+
+**What works:** Single sensorimotor chains (sensor → action → outcome)
+**Current limitation:** Competing implications to same goal with different contexts
+
+**Research value:** Identifies area for potential ONA improvement - precondition checking in decision-making when multiple implications target the same goal.
+
+---
+
 ## ❌ Broken Examples (Old JVM Version)
 
 These examples use `NAR.py` which doesn't work due to JVM subprocess buffering issues:
