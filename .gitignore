@@ -24,8 +24,9 @@ reports/
 *_IMPLEMENTATION.md
 PROJECT_SUMMARY.md
 
-# Incomplete Python interface
-misc/python/
+# Python environment
+misc/python/venv/
+misc/python/__pycache__/
 
 # Editor files
 *.swp
