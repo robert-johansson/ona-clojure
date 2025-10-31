@@ -48,21 +48,37 @@ def run_ona_test(test_file, binary):
         return f"ERROR: {e}"
 
 def parse_executions(output):
-    """Extract executed operations from output"""
+    """Extract executed operations from output
+
+    Both C ONA and Clojure ONA output execution lines, but in different formats:
+    - C ONA: "^left executed with args"
+    - Clojure ONA: BOTH "^left executed with args" AND "^executed: ^left desire=0.71"
+
+    We prefer the "^executed:" format as it's more informative and canonical.
+    If output contains "^executed:" lines, use only those.
+    Otherwise, use "executed with args" lines (for C ONA compatibility).
+    """
     executions = []
+    executed_format_lines = []
+
+    # First pass: collect all "^executed:" format lines
     for line in output.split('\n'):
-        # Match: ^executed: ^left desire=0.75
         if line.startswith('^executed:'):
             parts = line.split()
             if len(parts) >= 2:
-                op = parts[1]
-                executions.append(op)
-        # Also match: ^left executed with args
-        elif 'executed with args' in line:
+                executed_format_lines.append(parts[1])
+
+    # If we found ^executed: format lines, use those (Clojure ONA)
+    if executed_format_lines:
+        return executed_format_lines
+
+    # Otherwise, parse "executed with args" format (C ONA)
+    for line in output.split('\n'):
+        if 'executed with args' in line:
             parts = line.split()
             if len(parts) >= 1 and parts[0].startswith('^'):
-                op = parts[0]
-                executions.append(op)
+                executions.append(parts[0])
+
     return executions
 
 def parse_implications(output):
