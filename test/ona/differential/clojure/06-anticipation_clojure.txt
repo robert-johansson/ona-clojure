@@ -18,8 +18,10 @@ Type Narsese or commands. Use 'quit' to exit.
 // Step 1: Learn the temporal implication
 Input: <key --> pressed>. :|: {1.000000 0.900000}
 // executing 10 cycles
+done with 10 additional inference steps.
 Input: <door --> opened>. :|: {1.000000 0.900000}
 // executing 5 cycles
+done with 5 additional inference steps.
 // cycle
 // Check that implication was formed
 //*concepts
@@ -29,6 +31,7 @@ Input: <key --> pressed>. :|: {1.000000 0.900000}
 // cycle
 // Execute cycles - should trigger forward chaining
 // executing 5 cycles
+done with 5 additional inference steps.
 // cycle
 // Check concepts for prediction
 //*concepts

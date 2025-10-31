@@ -14,6 +14,8 @@
             [ona.decision :as decision]
             [ona.operation :as operation]
             [ona.prediction :as prediction]
+            [ona.inverted-atom-index :as idx]
+            [ona.variable :as var]
             [clojure.data.priority-map :as pm]))
 
 ;; =============================================================================
@@ -47,6 +49,68 @@
         (recur (pop queue)
                (conj selected event)
                (inc count))))))
+
+;; =============================================================================
+;; RELATED_CONCEPTS Pattern (Cycle.c lines 31-46)
+;; =============================================================================
+
+(defn related-concepts
+  "Find concepts semantically related to an event term using InvertedAtomIndex.
+
+  Implements the RELATED_CONCEPTS_FOREACH pattern from C ONA Cycle.c.
+  This is a critical optimization that avoids O(n) scan of all concepts.
+
+  NAL-6 Enhancement: Also includes variable concepts that could potentially
+  unify with any term.
+
+  Algorithm:
+  1. Extract atoms from event term
+  2. For each atom, lookup concepts in InvertedAtomIndex
+  3. Add all concepts with variable terms (they can unify with anything)
+  4. Return union of all matching concept Terms
+
+  From C ONA Cycle.c:31-46:
+    #define RELATED_CONCEPTS_FOREACH(CONCEPT, TERM, CODE) { \\
+        HashTable_Borrow(&HT, &HTconcepts); \\
+        for(...) { \\
+            CONCEPT = HashTable_Get(&HTconcepts, TERM->atoms[i]); \\
+            CODE \\
+        } \\
+    }
+
+  Args:
+    state - Current NAR state
+    event-term - Term to find related concepts for
+
+  Returns:
+    Set of related concept Term objects (used as keys in :concepts map)"
+  [state event-term]
+  (let [;; Get concepts that share atoms
+        atom-related (if-let [index (:inverted-atom-index state)]
+                       (idx/related-concepts index event-term)
+                       (set (keys (:concepts state))))
+
+        ;; NAL-6: Add all concepts with variables (they can unify with anything)
+        variable-concepts (filter var/has-variable? (keys (:concepts state)))]
+
+    (into atom-related variable-concepts)))
+
+(defn related-concept-map
+  "Get actual concept records for related terms.
+
+  Args:
+    state - Current NAR state
+    event-term - Term to find related concepts for
+
+  Returns:
+    Map of {concept-term → concept-record} for related concepts"
+  [state event-term]
+  (let [related-terms (related-concepts state event-term)]
+    (into {}
+          (keep (fn [term]
+                  (when-let [concept (get-in state [:concepts term])]
+                    [term concept]))
+                related-terms))))
 
 ;; =============================================================================
 ;; Temporal Sequence Mining
@@ -208,10 +272,23 @@
 ;; =============================================================================
 
 (defn apply-forward-chaining
-  "Apply forward chaining from a belief event.
+  "Apply forward chaining from a belief event using RELATED_CONCEPTS.
 
-  Given belief A, find implications <A =/> B> and predict B.
-  Also creates Prediction records for validation against outcomes.
+  NAL-6 Enhanced: Uses RELATED_CONCEPTS pattern with variable unification.
+
+  Algorithm:
+  1. Find concepts related to belief term (via InvertedAtomIndex)
+  2. For each related concept's implications:
+     a. Unify implication precondition with belief term
+     b. If unification succeeds, apply substitution
+     c. Predict postcondition via belief-deduction
+  3. Store predictions for validation
+
+  This enables variable-based forward chaining:
+  - Belief: bird.
+  - Related concept has: <$1 =/> flies>
+  - Unification: $1 ← bird
+  - Prediction: flies.
 
   Args:
     state - Current NAR state
@@ -222,40 +299,59 @@
     Updated state with predictions stored"
   [state belief-event current-time]
   (let [belief-term (:term belief-event)
-        projection-decay (get-in state [:config :truth-projection-decay])]
+        projection-decay (get-in state [:config :truth-projection-decay])
 
-    ;; Get concept for this belief
-    (if-let [concept (get-in state [:concepts belief-term])]
-      ;; Get all implications from this concept
-      (let [implications (vals (:implications concept))]
-        ;; Apply belief deduction for each implication
-        (reduce
-         (fn [state impl]
-           (let [[success? predicted-event]
-                 (inference/belief-deduction belief-event impl current-time projection-decay)]
-             (if success?
-               ;; Store prediction in postcondition concept
-               (let [postcondition-term (:term predicted-event)
-                     [state postcondition-concept] (core/get-concept state postcondition-term)
+        ;; RELATED_CONCEPTS: Find all concepts that share atoms with belief
+        related-concepts (related-concept-map state belief-term)]
 
-                     ;; Create Prediction record for validation
-                     pred (prediction/make-prediction predicted-event
-                                                      impl
-                                                      belief-term
-                                                      current-time)
+    ;; Process implications from ALL related concepts
+    (reduce-kv
+     (fn [state concept-term concept]
+       (let [implications (vals (:implications concept))]
+         ;; Try each implication
+         (reduce
+          (fn [state impl]
+            (let [precondition (term/get-subject (:term impl))
 
-                     ;; Update concept with prediction and prediction record
-                     updated-concept (-> postcondition-concept
-                                         (assoc :predicted-belief predicted-event)
-                                         (assoc :active-prediction pred)
-                                         (update :use-count inc)
-                                         (assoc :last-used current-time))]
-                 (assoc-in state [:concepts postcondition-term] updated-concept))
-               state)))
-         state
-         implications))
-      ;; No concept, no implications, just return state
-      state)))
+                  ;; NAL-6: Unify implication precondition with belief term
+                  substitution (var/unify precondition belief-term)]
+
+              (if (:success substitution)
+                ;; Unification succeeded - apply substitution and predict
+                (let [;; Substitute variables in implication
+                      instantiated-impl-term (var/substitute (:term impl) substitution)
+                      instantiated-impl (assoc impl :term instantiated-impl-term)
+
+                      ;; Apply belief deduction with instantiated implication
+                      [success? predicted-event]
+                      (inference/belief-deduction belief-event instantiated-impl
+                                                  current-time projection-decay)]
+
+                  (if success?
+                    ;; Store prediction in postcondition concept
+                    (let [postcondition-term (:term predicted-event)
+                          [state postcondition-concept] (core/get-concept state postcondition-term)
+
+                          ;; Create Prediction record for validation
+                          pred (prediction/make-prediction predicted-event
+                                                           instantiated-impl
+                                                           belief-term
+                                                           current-time)
+
+                          ;; Update concept with prediction
+                          updated-concept (-> postcondition-concept
+                                              (assoc :predicted-belief predicted-event)
+                                              (assoc :active-prediction pred)
+                                              (update :use-count inc)
+                                              (assoc :last-used current-time))]
+                      (assoc-in state [:concepts postcondition-term] updated-concept))
+                    state))
+                ;; Unification failed - skip this implication
+                state)))
+          state
+          implications)))
+     state
+     related-concepts)))
 
 ;; =============================================================================
 ;; Prediction Validation

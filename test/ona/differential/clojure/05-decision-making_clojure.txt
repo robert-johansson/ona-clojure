@@ -14,8 +14,10 @@ Type Narsese or commands. Use 'quit' to exit.
 // Step 1: Learn the temporal implication
 Input: <key --> pressed>. :|: {1.000000 0.900000}
 // executing 10 cycles
+done with 10 additional inference steps.
 Input: <door --> opened>. :|: {1.000000 0.900000}
 // executing 5 cycles
+done with 5 additional inference steps.
 // cycle
 // Check that implication was formed
 //*concepts
@@ -27,6 +29,7 @@ Input: <door --> opened>. :|: {1.000000 0.900000}
 // Step 2: Establish belief that key is pressed NOW
 Input: <key --> pressed>. :|: {1.000000 0.900000}
 // executing 1 cycles
+done with 1 additional inference steps.
 // cycle
 // Step 3: Add goal for door to be opened
 Input: <door --> opened>! :|: {1.000000 0.900000}
@@ -34,6 +37,7 @@ Input: <door --> opened>! :|: {1.000000 0.900000}
 // cycle
 // Execute cycles - should trigger decision making
 // executing 10 cycles
+done with 10 additional inference steps.
 // cycle
 //*concepts
 //term: (<key --> pressed> &/ <door --> opened>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 21, "frequency": 1.00, "confidence": 0.73, "termlinks": []}

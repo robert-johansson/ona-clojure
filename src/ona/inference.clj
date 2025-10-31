@@ -7,7 +7,8 @@
   (:require [ona.event :as event]
             [ona.term :as term]
             [ona.truth :as truth]
-            [ona.implication :as implication]))
+            [ona.implication :as implication]
+            [ona.variable :as var]))
 
 ;; =============================================================================
 ;; Helper Functions
@@ -81,6 +82,45 @@
                                             :processed? false
                                             :input? false})]
       [true derived-event])))
+
+;; =============================================================================
+;; Variable Introduction for Implications
+;; =============================================================================
+
+(defn introduce-variables-simple
+  "Simple variable introduction: Replace precondition of implication with variable.
+
+  NAL-6 Enhancement: Generalizes concrete implications by introducing variables.
+  Example: <bird =/> flies> → <$1 =/> flies>
+
+  This is a simplified version focusing on the most common pattern - generalizing
+  the precondition to allow pattern matching.
+
+  Args:
+    impl - Implication to generalize
+    var-name - Variable name to use (default \"$1\")
+
+  Returns:
+    Generalized implication with variable in precondition"
+  ([impl]
+   (introduce-variables-simple impl "$1"))
+  ([impl var-name]
+   (let [;; Extract precondition and postcondition
+         precond (implication/get-precondition impl)
+         postcond (implication/get-postcondition impl)
+
+         ;; Replace precondition with variable
+         var-term (term/make-atomic-term var-name)
+         generalized-impl-term (term/make-temporal-implication var-term postcond)
+
+         ;; Create new implication with variable
+         generalized-impl (implication/make-implication
+                           generalized-impl-term
+                           (:truth impl)
+                           (:occurrence-time-offset impl)
+                           (:creation-time impl)
+                           {:stamp (:stamp impl)})]
+     generalized-impl)))
 
 ;; =============================================================================
 ;; Temporal Induction (BeliefInduction)
@@ -157,10 +197,15 @@
 
   Given:
   - Belief event for A
-  - Temporal implication <A =/> B>
+  - Temporal implication <A =/> B> (may contain variables)
 
   Derive:
   - Predicted belief event for B
+
+  NAL-6 Enhancement:
+  - Unifies belief term with implication precondition (pattern matching)
+  - Substitutes variable bindings into postcondition
+  - Example: {bird., <$1 =/> ($1 * wings)>} |- (bird * wings).
 
   Truth function: Deduction (f = fa * fi, c = ca * ci * fa)
   Occurrence time: belief-time + implication-offset
@@ -173,42 +218,56 @@
 
   Returns:
     [success? predicted-event]
-    - success? is false if conditions not met
+    - success? is false if conditions not met or unification fails
     - predicted-event is the derived belief for postcondition"
   [belief-event impl current-time projection-decay]
   (if (not= (:type belief-event) :belief)
     [false nil]
-    (let [;; Get postcondition term from implication
+    (let [;; Get precondition and postcondition from implication
+          precondition-term (implication/get-precondition impl)
           postcondition-term (implication/get-postcondition impl)
 
-          ;; Calculate predicted occurrence time
-          predicted-time (if (event/eternal? belief-event)
-                          event/eternal-occurrence
-                          (+ (:occurrence-time belief-event)
-                             (:occurrence-time-offset impl)))
+          ;; NAL-6: Unify belief term with implication precondition
+          ;; This enables pattern matching: belief 'bird' matches precondition '$1'
+          substitution (var/unify precondition-term (:term belief-event))]
 
-          creation-time current-time
+      ;; Check if unification succeeded
+      (if-not (:success substitution)
+        [false nil]  ;; Unification failed - belief doesn't match pattern
 
-          ;; Get truth values
-          belief-truth (:truth belief-event)
-          impl-truth (:truth impl)
+        ;; Unification succeeded - apply substitution to postcondition
+        (let [;; NAL-6: Substitute variable bindings into postcondition
+              ;; Example: postcondition '($1 * wings)' with $1←bird becomes '(bird * wings)'
+              substituted-postcondition (var/substitute postcondition-term substitution)
 
-          ;; Apply deduction truth function
-          predicted-truth (truth/deduction impl-truth belief-truth)
+              ;; Calculate predicted occurrence time
+              predicted-time (if (event/eternal? belief-event)
+                              event/eternal-occurrence
+                              (+ (:occurrence-time belief-event)
+                                 (:occurrence-time-offset impl)))
 
-          ;; Merge stamps (simplified - use belief stamp)
-          predicted-stamp (:stamp belief-event)
+              creation-time current-time
 
-          ;; Create predicted event
-          predicted-event (event/make-belief postcondition-term
-                                             predicted-truth
-                                             predicted-time
-                                             creation-time
-                                             {:stamp predicted-stamp
-                                              :processed? false
-                                              :input? false
-                                              :predicted? true})]
-      [true predicted-event])))
+              ;; Get truth values
+              belief-truth (:truth belief-event)
+              impl-truth (:truth impl)
+
+              ;; Apply deduction truth function
+              predicted-truth (truth/deduction impl-truth belief-truth)
+
+              ;; Merge stamps (simplified - use belief stamp)
+              predicted-stamp (:stamp belief-event)
+
+              ;; Create predicted event with substituted term
+              predicted-event (event/make-belief substituted-postcondition
+                                                 predicted-truth
+                                                 predicted-time
+                                                 creation-time
+                                                 {:stamp predicted-stamp
+                                                  :processed? false
+                                                  :input? false
+                                                  :predicted? true})]
+          [true predicted-event])))))
 
 ;; =============================================================================
 ;; Revision

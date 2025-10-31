@@ -10,12 +10,14 @@ Input: <a --> event>. :|: {1.000000 0.900000}
 // cycle
 // Advance to time 20
 // executing 10 cycles
+done with 10 additional inference steps.
 // cycle
 // Input second event at time 20
 Input: <b --> event>. :|: {1.000000 0.900000}
 // cycle
 // Execute cycles to process and derive sequence
 // executing 5 cycles
+done with 5 additional inference steps.
 // cycle
 // Check concepts - should show a, b, and (a &/ b)
 //*concepts

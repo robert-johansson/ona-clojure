@@ -1,85 +1,142 @@
-OpenNARS for Applications (Clojure)
-Type Narsese or commands. Use 'quit' to exit.
-// Test 1: Basic belief question
-// Add a belief and query for it
-Input: A. {1.000000 0.900000}
-// executing 10 cycles
-Input: A? {1.000000 0.900000}
-Answer: A. {1.000000 0.900000} (from eternal-belief in A)
-// cycle
-// Test 2: Temporal belief question
-// Add temporal belief and query
-Input: B. :|: {1.000000 0.900000}
-// executing 10 cycles
-Input: B? {1.000000 0.900000}
-Answer: B. {1.000000 0.900000} (from belief in B)
-// cycle
-// Test 3: Unknown term question
-// Query for term that doesn't exist
-Input: UNKNOWN? {1.000000 0.900000}
-Answer: None
-// cycle
-// Test 4: Implication question
-// Learn temporal implication and query for it
-Input: C. :|: {1.000000 0.900000}
-Input: D. :|: {1.000000 0.900000}
-// executing 100 cycles
-Input: <C =/> D>? {1.000000 0.900000}
-Answer: <C =/> D>. {1.000000 0.445030} (from implication in C)
-// cycle
-// Test 5: Multiple beliefs - best answer by expectation
-// Add belief with high confidence
-Input: E. {1.000000 0.900000}
-// executing 10 cycles
-Input: E? {1.000000 0.900000}
-Answer: E. {1.000000 0.900000} (from eternal-belief in E)
-// cycle
-// Test 6: Question after prediction
-// Learn implication, observe precondition, query postcondition
-Input: F. :|: {1.000000 0.900000}
-Input: G. :|: {1.000000 0.900000}
-// executing 100 cycles
-// Now observe F again (should predict G)
-Input: F. :|: {1.000000 0.900000}
-// executing 10 cycles
-// Query for G (should find predicted belief)
-Input: G? {1.000000 0.900000}
-Answer: G. {1.000000 0.900000} (from belief in G)
-// cycle
-// Test 7: Chained implications
-Input: H. :|: {1.000000 0.900000}
-Input: I. :|: {1.000000 0.900000}
-// executing 100 cycles
-Input: I. :|: {1.000000 0.900000}
-Input: J. :|: {1.000000 0.900000}
-// executing 100 cycles
-// Should have learned H =/> I and I =/> J
-Input: <H =/> I>? {1.000000 0.900000}
-Answer: <H =/> I>. {1.000000 0.445030} (from implication in H)
-// cycle
-// Test 8: Question priming (priority boost)
-// This tests that concepts involved in answering get priority boost
-Input: K. {1.000000 0.900000}
-// executing 10 cycles
-// Check stats before question
+Comment:  Test 1: Basic belief question
+Comment:  Add a belief and query for it
+Input: A. Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: A. Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Input: A?
+Answer: A. creationTime=1 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Comment:  Test 2: Temporal belief question
+Comment:  Add temporal belief and query
+Input: B. :|: occurrenceTime=13 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: B. :|: occurrenceTime=13 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Input: B?
+Answer: None.
+Comment:  Test 3: Unknown term question
+Comment:  Query for term that doesn't exist
+Input: UNKNOWN?
+Answer: None.
+Comment:  Test 4: Implication question
+Comment:  Learn temporal implication and query for it
+Input: C. :|: occurrenceTime=1 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: C. :|: occurrenceTime=1 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Input: D. :|: occurrenceTime=2 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: D. :|: occurrenceTime=2 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=1.000000 <C =/> D>. Priority=0.348301 Stamp=[1,2] Truth: frequency=1.000000, confidence=0.282230
+performing 100 inference steps:
+done with 100 additional inference steps.
+Input: <C =/> D>?
+Answer: <C =/> D>. creationTime=2 Stamp=[1,2] Truth: frequency=0.982144, confidence=0.285894
+Comment:  Test 5: Multiple beliefs - best answer by expectation
+Comment:  Add belief with high confidence
+Input: E. Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: E. Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Input: E?
+Answer: E. creationTime=1 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Comment:  Test 6: Question after prediction
+Comment:  Learn implication, observe precondition, query postcondition
+Input: F. :|: occurrenceTime=1 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: F. :|: occurrenceTime=1 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Input: G. :|: occurrenceTime=2 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: G. :|: occurrenceTime=2 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=1.000000 <F =/> G>. Priority=0.348301 Stamp=[1,2] Truth: frequency=1.000000, confidence=0.282230
+performing 100 inference steps:
+done with 100 additional inference steps.
+Comment:  Now observe F again (should predict G)
+Input: F. :|: occurrenceTime=103 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+Selected: F. :|: occurrenceTime=103 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Comment:  Query for G (should find predicted belief)
+Input: G?
+Answer: None.
+Comment:  Test 7: Chained implications
+Input: H. :|: occurrenceTime=1 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: H. :|: occurrenceTime=1 Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Input: I. :|: occurrenceTime=2 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Selected: I. :|: occurrenceTime=2 Priority=1.000000 Stamp=[2] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=1.000000 <H =/> I>. Priority=0.348301 Stamp=[1,2] Truth: frequency=1.000000, confidence=0.282230
+performing 100 inference steps:
+done with 100 additional inference steps.
+Input: I. :|: occurrenceTime=103 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+Selected: I. :|: occurrenceTime=103 Priority=1.000000 Stamp=[3] Truth: frequency=1.000000, confidence=0.900000
+Input: J. :|: occurrenceTime=104 Priority=1.000000 Stamp=[4] Truth: frequency=1.000000, confidence=0.900000
+Selected: J. :|: occurrenceTime=104 Priority=1.000000 Stamp=[4] Truth: frequency=1.000000, confidence=0.900000
+Derived: dt=1.000000 <I =/> J>. Priority=0.348301 Stamp=[3,4] Truth: frequency=1.000000, confidence=0.282230
+performing 100 inference steps:
+done with 100 additional inference steps.
+Comment:  Should have learned H =/> I and I =/> J
+Input: <H =/> I>?
+Answer: <H =/> I>. creationTime=2 Stamp=[1,2] Truth: frequency=0.948280, confidence=0.293111
+Comment:  Test 8: Question priming (priority boost)
+Comment:  This tests that concepts involved in answering get priority boost
+Input: K. Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Selected: K. Priority=1.000000 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+performing 10 inference steps:
+done with 10 additional inference steps.
+Comment:  Check stats before question
 //*stats
 Statistics
 ----------
-currentTime:                    11
-total concepts:                 1
-current belief events cnt:      0
-current goal events cnt:        0
-current average concept priority: 0.600000
+countConceptsMatchedTotal:	19
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	1
+currentTime:			12
+total concepts:			1
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	0
+current average concept priority:	0.000077
+current average concept usefulness:	0.000244
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		74
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
 //*done
-Input: K? {1.000000 0.900000}
-Answer: K. {1.000000 0.900000} (from eternal-belief in K)
-// Check stats after question (priority should increase)
+Input: K?
+Answer: K. creationTime=1 Stamp=[1] Truth: frequency=1.000000, confidence=0.900000
+Comment:  Check stats after question (priority should increase)
 //*stats
 Statistics
 ----------
-currentTime:                    11
-total concepts:                 1
-current belief events cnt:      0
-current goal events cnt:        0
-current average concept priority: 0.700000
+countConceptsMatchedTotal:	19
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	1
+currentTime:			12
+total concepts:			1
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	0
+current average concept priority:	0.000077
+current average concept usefulness:	0.000244
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		74
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
 //*done
+Statistics
+----------
+countConceptsMatchedTotal:	19
+countConceptsMatchedMax:	2
+countConceptsMatchedAverage:	1
+currentTime:			12
+total concepts:			1
+DeclarativeImplicationTableMaxItems:	0
+TemporalImplicationTableMaxItems:	0
+current average concept priority:	0.000077
+current average concept usefulness:	0.000244
+current belief events cnt:		0
+current goal events cnt:		0
+Count atomic terms used:		74
+current average belief event priority:	0.000000
+current average goal event priority:	0.000000
+Maximum chain length in concept hashtable: 1
+Maximum chain length in atoms hashtable: 2
