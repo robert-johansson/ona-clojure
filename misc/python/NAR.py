@@ -1,319 +1,196 @@
 """
-Python interface for Clojure ONA (OpenNARS for Applications)
+Drop-in compatible NAR.py for Clojure ONA native binary
 
-Similar to C ONA's NAR.py but simpler - Clojure ONA outputs JSON!
+This is API-compatible with the C ONA NAR.py, so all existing Python code
+written for C ONA will work unchanged with the GraalVM native Clojure binary.
 
-Usage:
-    from NAR import AddInput, Reset, GetStats
-
-    # Add input and get results
-    result = AddInput("bird.")
-    print(result["executions"])  # Operations executed
-    print(result["derivations"])  # Derived events
-    print(result["answers"])      # Query answers
-
-    # Reset system
-    Reset()
-
-    # Get statistics
-    stats = GetStats()
+Uses threading to avoid subprocess buffering issues.
 """
-
 import os
 import sys
-import json
+import ast
 import signal
 import subprocess
+import threading
+import queue
+import time
 from pathlib import Path
 
-# Find the Clojure ONA directory
+# Find native binary
 CLOJURE_ONA_DIR = Path(__file__).parent.parent.parent.absolute()
+NATIVE_BINARY = CLOJURE_ONA_DIR / "ona"
 
 def spawnNAR():
-    """Spawn Clojure ONA shell process"""
-    return subprocess.Popen(
-        ["clj", "-M:ona", "shell"],
+    """Spawn ONA native binary subprocess with threaded output reading"""
+    if not NATIVE_BINARY.exists():
+        raise FileNotFoundError(
+            f"Native binary not found: {NATIVE_BINARY}\n"
+            "Run: ./scripts/build_native.sh from {CLOJURE_ONA_DIR}"
+        )
+
+    proc = subprocess.Popen(
+        [str(NATIVE_BINARY), "shell"],
         stdin=subprocess.PIPE,
         stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stderr=subprocess.STDOUT,
         universal_newlines=True,
-        cwd=str(CLOJURE_ONA_DIR),
-        bufsize=1  # Line buffered
+        bufsize=1,
+        cwd=str(CLOJURE_ONA_DIR)
     )
+
+    # Create output queue and reader thread
+    proc.output_queue = queue.Queue()
+
+    def read_output():
+        try:
+            for line in iter(proc.stdout.readline, ''):
+                if line:
+                    proc.output_queue.put(line.rstrip())
+        except:
+            pass
+
+    proc.reader_thread = threading.Thread(target=read_output, daemon=True)
+    proc.reader_thread.start()
+
+    # Consume welcome message
+    time.sleep(0.05)
+    while True:
+        try:
+            proc.output_queue.get(timeout=0.05)
+        except queue.Empty:
+            break
+
+    return proc
 
 NARproc = spawnNAR()
 
 def getNAR():
-    """Get current NAR process"""
     return NARproc
 
 def setNAR(proc):
-    """Set NAR process"""
     global NARproc
     NARproc = proc
 
 def terminateNAR(usedNAR=None):
-    """Terminate NAR process"""
     if usedNAR is None:
         usedNAR = NARproc
     try:
-        os.killpg(os.getpgid(usedNAR.pid), signal.SIGTERM)
+        usedNAR.stdin.write("quit\n")
+        usedNAR.stdin.flush()
+        usedNAR.wait(timeout=1)
     except:
         usedNAR.terminate()
 
-def parseTruth(truth_obj):
-    """Parse truth value from JSON object"""
-    if isinstance(truth_obj, dict):
-        return {
-            "frequency": truth_obj.get("frequency", 1.0),
-            "confidence": truth_obj.get("confidence", 0.9)
-        }
-    return None
+def parseTruth(T):
+    return {"frequency": T.split("frequency=")[1].split(" confidence")[0].replace(",",""), "confidence": T.split(" confidence=")[1].split(" dt=")[0].split(" occurrenceTime=")[0]}
 
-def parseTask(task_obj):
-    """Parse task/event from JSON object
+def parseTask(s):
+    M = {"occurrenceTime" : "eternal"}
+    if " :|:" in s:
+        M["occurrenceTime"] = "now"
+        s = s.replace(" :|:","")
+        if "occurrenceTime" in s:
+            M["occurrenceTime"] = s.split("occurrenceTime=")[1].split(" ")[0]
+    if "Stamp" in s:
+        M["Stamp"] = ast.literal_eval(s.split("Stamp=")[1].split("]")[0]+"]")
+    sentence = s.split(" occurrenceTime=")[0] if " occurrenceTime=" in s else s.split(" Stamp=")[0].split(" Priority=")[0].split(" creationTime=")[0]
+    M["punctuation"] = sentence[-4] if ":|:" in sentence else sentence[-1]
+    M["term"] = sentence.split(" creationTime")[0].split(" occurrenceTime")[0].split(" Truth")[0].split(" Stamp=")[0][:-1]
+    if "Truth" in s:
+        M["truth"] = parseTruth(s.split("Truth: ")[1])
+    if "Priority" in s:
+        M["Priority"] = s.split("Priority=")[1].split(" ")[0]
+    return M
 
-    Clojure ONA outputs events as:
-    {
-        "term": "A",
-        "type": "belief" | "goal",
-        "truth": {"frequency": 1.0, "confidence": 0.9},
-        "occurrence-time": 123 | "eternal"
-    }
-    """
-    if not isinstance(task_obj, dict):
+def parseReason(sraw):
+    if "implication: " not in sraw:
         return None
+    Implication = parseTask(sraw.split("implication: ")[-1].split("precondition: ")[0]) #last reason only (others couldn't be associated currently)
+    Precondition = parseTask(sraw.split("precondition: ")[-1].split("\n")[0])
+    Implication["occurrenceTime"] = "eternal"
+    Precondition["punctuation"] = Implication["punctuation"] = "."
+    Reason = {}
+    Reason["desire"] = sraw.split("decision expectation=")[-1].split(" ")[0]
+    Reason["hypothesis"] = Implication
+    Reason["precondition"] = Precondition
+    return Reason
 
-    result = {
-        "term": task_obj.get("term", ""),
-        "occurrenceTime": str(task_obj.get("occurrence-time", "eternal"))
-    }
+def parseExecution(e):
+    if "args " not in e:
+        return {"operator" : e.split(" ")[0], "arguments" : []}
+    opname = e.split(" ")[0]
+    return {"operator": opname, "arguments": e.split("args ")[1].split("{SELF} * ")[1][:-1], 'metta': '(^ ' + opname[1:] + ')'}
 
-    # Determine punctuation from type
-    event_type = task_obj.get("type", "belief")
-    if event_type == "goal":
-        result["punctuation"] = "!"
-    elif event_type == "question":
-        result["punctuation"] = "?"
-    else:
-        result["punctuation"] = "."
+def GetRawOutput(usedNAR):
+    """Get raw output from NAR using threaded queue reading"""
+    usedNAR.stdin.write("0\n")
+    usedNAR.stdin.flush()
 
-    # Parse truth if present
-    if "truth" in task_obj:
-        result["truth"] = parseTruth(task_obj["truth"])
-
-    # Priority if present
-    if "priority" in task_obj:
-        result["Priority"] = str(task_obj["priority"])
-
-    return result
-
-def parseExecution(exec_str):
-    """Parse execution string
-
-    Clojure ONA outputs: ^executed: ^op desire=0.70
-    or when parsed from JSON: {"operation": "^op", "desire": 0.70}
-    """
-    if isinstance(exec_str, dict):
-        return {
-            "operator": exec_str.get("operation", ""),
-            "arguments": exec_str.get("arguments", []),
-            "desire": exec_str.get("desire", 0.0)
-        }
-
-    # Parse from text format
-    if "^executed:" in exec_str:
-        parts = exec_str.split("^executed:")[1].strip().split()
-        operator = parts[0] if parts else ""
-        desire = 0.0
-        if "desire=" in exec_str:
-            desire = float(exec_str.split("desire=")[1].split()[0])
-        return {
-            "operator": operator,
-            "arguments": [],
-            "desire": desire
-        }
-
-    return {"operator": "", "arguments": [], "desire": 0.0}
-
-def parseReason(lines):
-    """Parse decision reasoning from output lines
-
-    Looks for lines like:
-    ^decide: <A =/> B> desire=0.70
-    """
-    for line in lines:
-        if "^decide:" in line:
-            parts = line.split("^decide:")[1].strip()
-            desire = 0.0
-            if "desire=" in parts:
-                desire = float(parts.split("desire=")[1].split()[0])
-
-            implication = parts.split("desire=")[0].strip()
-            return {
-                "desire": desire,
-                "hypothesis": {"term": implication, "punctuation": "."},
-                "precondition": None  # Would need to parse implication
-            }
-
-    return None
-
-def GetRawOutput(usedNAR, send_zero=True):
-    """Get raw output lines from NAR
-
-    Args:
-        send_zero: If True, sends '0' to execute 0 cycles and flush output.
-                   If False, just reads available output without triggering new execution.
-    """
     lines = []
     requestOutputArgs = False
+    deadline = time.time() + 0.5
 
-    if send_zero:
-        usedNAR.stdin.write("0\n")
-        usedNAR.stdin.flush()
-
-    # Read lines until we see a "done" message or timeout
-    while True:
-        line = usedNAR.stdout.readline()
-        if not line:
-            break
-        line = line.strip()
-
-        # Stop when we see the "done" message
-        if "done with" in line and "additional inference steps" in line:
-            break
-
-        if line:
+    while time.time() < deadline:
+        try:
+            line = usedNAR.output_queue.get(timeout=0.05)
+            if line == "done with 0 additional inference steps.":
+                break
             lines.append(line)
-
-        if "operation result product expected" in line.lower():
-            requestOutputArgs = True
-            break
+            if line == "//Operation result product expected:":
+                requestOutputArgs = True
+                break
+            if line == "//*done":
+                break
+        except queue.Empty:
+            if lines:  # Got some output, done
+                break
 
     return lines, requestOutputArgs
 
 def GetOutput(usedNAR):
-    """Get parsed output from NAR
-
-    Returns dict with:
-        - input: Input events
-        - derivations: Derived/revised events
-        - answers: Query answers
-        - executions: Operations executed
-        - reason: Decision reasoning
-        - selections: Selected events
-        - raw: Raw text output
-    """
     lines, requestOutputArgs = GetRawOutput(usedNAR)
-
-    executions = []
-    inputs = []
-    derivations = []
-    answers = []
-    selections = []
-
-    for line in lines:
-        # Try to parse as JSON first
-        if line.startswith('{') or line.startswith('['):
-            try:
-                obj = json.loads(line)
-                # Handle different JSON output types
-                if isinstance(obj, dict):
-                    if "operation" in obj:
-                        executions.append(parseExecution(obj))
-                    elif "term" in obj:
-                        parsed = parseTask(obj)
-                        if parsed:
-                            derivations.append(parsed)
-            except json.JSONDecodeError:
-                pass
-
-        # Parse text output
-        if line.startswith('^executed:'):
-            executions.append(parseExecution(line))
-        elif line.startswith('Input:'):
-            task_str = line.split('Input:')[1].strip()
-            # Would need to parse Narsese here
-            inputs.append({"term": task_str, "punctuation": "."})
-        elif line.startswith('Derived:') or line.startswith('Revised:'):
-            task_str = line.split(':')[1].strip()
-            derivations.append({"term": task_str, "punctuation": "."})
-        elif line.startswith('Answer:'):
-            task_str = line.split('Answer:')[1].strip()
-            answers.append({"term": task_str, "punctuation": "."})
-        elif line.startswith('Selected:'):
-            task_str = line.split('Selected:')[1].strip()
-            selections.append({"term": task_str, "punctuation": "."})
-
-    reason = parseReason(lines)
-
-    return {
-        "input": inputs,
-        "derivations": derivations,
-        "answers": answers,
-        "executions": executions,
-        "reason": reason,
-        "selections": selections,
-        "raw": "\n".join(lines),
-        "requestOutputArgs": requestOutputArgs
-    }
+    executions = [parseExecution(l) for l in lines if l.startswith('^')]
+    inputs = [parseTask(l.split("Input: ")[1]) for l in lines if l.startswith('Input:')]
+    derivations = [parseTask(l.split("Derived: " if l.startswith('Derived:') else "Revised: ")[1]) for l in lines if l.startswith('Derived:') or l.startswith('Revised:')]
+    answers = [parseTask(l.split("Answer: ")[1]) for l in lines if l.startswith('Answer:')]
+    selections = [parseTask(l.split("Selected: ")[1]) for l in lines if l.startswith('Selected:')]
+    reason = parseReason("\n".join(lines))
+    return {"input": inputs, "derivations": derivations, "answers": answers, "executions": executions, "reason": reason, "selections": selections, "raw": "\n".join(lines), "requestOutputArgs" : requestOutputArgs}
 
 def GetStats(usedNAR):
-    """Get NAR statistics
-
-    Sends *stats command and parses output
-    """
-    usedNAR.stdin.write("*stats\n")
-    usedNAR.stdin.flush()
-
+    Stats = {}
     lines, _ = GetRawOutput(usedNAR)
-    stats = {}
-
-    for line in lines:
-        if ':' in line and not line.startswith('//'):
-            try:
-                left = line.split(':')[0].strip().replace(' ', '_')
-                right = float(line.split(':')[1].strip())
-                stats[left] = right
-            except (ValueError, IndexError):
-                pass
-
-    return stats
+    for l in lines:
+        if ":" in l and not l.startswith("//"):
+            parts = l.split(":", 1)
+            if len(parts) == 2:
+                leftside = parts[0].replace(" ", "_").strip()
+                rightside_str = parts[1].strip()
+                try:
+                    Stats[leftside] = float(rightside_str)
+                except ValueError:
+                    Stats[leftside] = rightside_str
+    return Stats
 
 def AddInput(narsese, Print=True, usedNAR=None):
-    """Add Narsese input to NAR
-
-    Args:
-        narsese: Narsese string (e.g., "bird. :|:" or "^left!")
-        Print: Whether to print raw output
-        usedNAR: NAR process to use (default: global NARproc)
-
-    Returns:
-        Parsed output dict (or stats dict if narsese == "*stats")
-    """
     if usedNAR is None:
         usedNAR = NARproc
-
     usedNAR.stdin.write(narsese + '\n')
     usedNAR.stdin.flush()
-
     ReturnStats = narsese == "*stats"
     if ReturnStats:
-        stats = GetStats(usedNAR)
+        result = GetStats(usedNAR)
         if Print:
-            for key, value in stats.items():
-                print(f"{key}: {value}")
-        return stats
-
+            lines, _ = GetRawOutput(usedNAR)
+            print("\n".join(lines))
+        return result
     ret = GetOutput(usedNAR)
     if Print:
         print(ret["raw"])
         sys.stdout.flush()
-
     return ret
 
 def Exit(usedNAR=None):
-    """Exit NAR process"""
     if usedNAR is None:
         usedNAR = NARproc
     try:
@@ -321,45 +198,30 @@ def Exit(usedNAR=None):
         usedNAR.stdin.flush()
     except:
         pass
-    finally:
-        terminateNAR(usedNAR)
 
 def Reset(usedNAR=None):
-    """Reset NAR memory"""
     if usedNAR is None:
         usedNAR = NARproc
-    AddInput("*reset", Print=False, usedNAR=usedNAR)
+    AddInput("*reset", usedNAR=usedNAR)
+
+# Set default volume
+AddInput("*volume=100")
 
 def PrintedTask(task):
-    """Convert task dict back to Narsese string"""
     st = task["term"] + task["punctuation"]
-
-    if task.get("occurrenceTime", "eternal") != "eternal":
-        if task["occurrenceTime"] == "now":
-            st += " :|:"
-        elif task["occurrenceTime"].isdigit():
-            st += f" :|: occurrenceTime={task['occurrenceTime']}"
-
-    if "Priority" in task:
-        st += f" Priority={task['Priority']}"
-
-    if "truth" in task:
-        st += f" Truth: frequency={task['truth']['frequency']} confidence={task['truth']['confidence']}"
-
+    st += (" :|: occurrenceTime="+task["occurrenceTime"] if task["occurrenceTime"].isdigit() else "")
+    if "Priority" in task: st += " Priority=" + str(task["Priority"])
+    if "truth" in task: st += " Truth: frequency="+task["truth"]["frequency"] + " confidence="+task["truth"]["confidence"]
     return st
 
 def Shell():
-    """Interactive shell - read from stdin and send to NAR"""
     while True:
         try:
             inp = input().rstrip("\n")
-        except (EOFError, KeyboardInterrupt):
+        except:
             Exit()
-            sys.exit(0)
+            exit(0)
         AddInput(inp)
-
-# Set volume to 100 on startup
-AddInput("*volume=100", Print=False)
 
 if __name__ == "__main__":
     Shell()
