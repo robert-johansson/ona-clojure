@@ -223,13 +223,13 @@
     Vector of [implication precondition-concept substitution] triples"
   [state goal]
   (let [goal-term (:term goal)
-        volume (:volume state)
+        debug? (:debug state)
         all-concepts (vals (:concepts state))]
 
     ;; DEBUG logging
-    (when (= volume 100)
-      (println (str "^debug[find-matching-implications]: Goal = " (term/format-term goal-term)))
-      (println (str "^debug[find-matching-implications]: Scanning " (count all-concepts) " concepts")))
+    (when debug?
+      (println (str "// DEBUG[find-matching-implications]: Goal = " (term/format-term goal-term)))
+      (println (str "// DEBUG[find-matching-implications]: Scanning " (count all-concepts) " concepts")))
 
     ;; Scan all concepts for implications
     ;; CRITICAL: Only scan operation tables 1-10 (procedural), skip table 0 (declarative)
@@ -241,23 +241,23 @@
                 :let [impl-table (nth (:precondition-beliefs concept) opi)
                       impls (vals impl-table)]
                 :when (seq impls)  ; Only process if table has implications
-                :let [_ (when (= volume 100)
-                          (println (str "^debug[find-matching-implications]:   Concept " (term/format-term concept-term)
+                :let [_ (when debug?
+                          (println (str "// DEBUG[find-matching-implications]:   Concept " (term/format-term concept-term)
                                        " table[" opi "] has " (count impls) " implications")))]
                 impl impls
                 :let [postcondition (implication/get-postcondition impl)
-                      _ (when (= volume 100)
-                          (println (str "^debug[find-matching-implications]:     Impl: " (term/format-term (:term impl))))
-                          (println (str "^debug[find-matching-implications]:       Postcond: " (term/format-term postcondition))))
+                      _ (when debug?
+                          (println (str "// DEBUG[find-matching-implications]:     Impl: " (term/format-term (:term impl))))
+                          (println (str "// DEBUG[find-matching-implications]:       Postcond: " (term/format-term postcondition))))
                       ;; NAL-6: Unify postcondition (pattern) with goal (specific)
                       substitution (var/unify postcondition goal-term)
-                      _ (when (= volume 100)
-                          (println (str "^debug[find-matching-implications]:       Match: " (:success substitution))))]
+                      _ (when debug?
+                          (println (str "// DEBUG[find-matching-implications]:       Match: " (:success substitution))))]
                 :when (:success substitution)]
             [impl concept substitution])]
 
-      (when (= volume 100)
-        (println (str "^debug[find-matching-implications]: Found " (count results) " matching implications")))
+      (when debug?
+        (println (str "// DEBUG[find-matching-implications]: Found " (count results) " matching implications")))
 
       results)))
 
@@ -281,42 +281,42 @@
    For sequences: check if ALL components have recent beliefs."
   [state context-term current-time]
   (let [components (get-sequence-components context-term)
-        volume (:volume state)]
-    ;; Debug logging if volume is 100
-    (when (= volume 100)
-      (println (str "^debug: checking context " (term/format-term context-term)))
-      (println (str "^debug:   components: " (mapv term/format-term components))))
+        debug? (:debug state)]
+    ;; Debug logging
+    (when debug?
+      (println (str "// DEBUG: checking context " (term/format-term context-term)))
+      (println (str "// DEBUG:   components: " (mapv term/format-term components))))
 
     ;; Check if ALL components have recent beliefs
     (every? (fn [component]
               (let [key (core/get-concept-key component)]
-                (when (= volume 100)
-                  (println (str "^debug:   component " (term/format-term component)
+                (when debug?
+                  (println (str "// DEBUG:   component " (term/format-term component)
                                " → key " (term/format-term key))))
                 (if-let [concept (get-in state [:concepts key])]
                   (do
-                    (when (= volume 100)
-                      (println (str "^debug:     concept found, belief-spike: "
+                    (when debug?
+                      (println (str "// DEBUG:     concept found, belief-spike: "
                                    (if (:belief-spike concept) "YES" "NO"))))
                     (if-let [belief-spike (:belief-spike concept)]
                       (let [is-belief (= (:type belief-spike) :belief)
                             occ-time (:occurrence-time belief-spike)
                             age (- current-time occ-time)
                             is-recent (<= age 20)]
-                        (when (= volume 100)
-                          (println (str "^debug:       type=" (:type belief-spike)
+                        (when debug?
+                          (println (str "// DEBUG:       type=" (:type belief-spike)
                                        ", occ-time=" occ-time
                                        ", current-time=" current-time
                                        ", age=" age
                                        ", recent=" is-recent)))
                         (and is-belief is-recent))
                       (do
-                        (when (= volume 100)
-                          (println "^debug:       NO belief-spike"))
+                        (when debug?
+                          (println "// DEBUG:       NO belief-spike"))
                         false)))
                   (do
-                    (when (= volume 100)
-                      (println "^debug:     concept NOT found"))
+                    (when debug?
+                      (println "// DEBUG:     concept NOT found"))
                     false))))
             components)))
 
@@ -339,7 +339,7 @@
   Returns:
     Best decision (or null-decision if none found)"
   [state goal current-time]
-  (let [volume (:volume state)
+  (let [debug? (:debug state)
         ;; Step 1: Find implications whose postcondition unifies with goal
         matches (find-matching-implications state goal)
 
@@ -387,12 +387,12 @@
         ;; Select best by SPECIFICITY first, then by desire
         ;; This ensures compound conditions (red & bright) are preferred over simple ones (bright)
         best (reduce (fn [best current]
-                       (when (= volume 100)
-                         (println (str "^debug[best-candidate]: Comparing decisions"))
-                         (println (str "^debug[best-candidate]:   current: op=" (term/format-term (:operation-term current))
+                       (when debug?
+                         (println (str "// DEBUG[best-candidate]: Comparing decisions"))
+                         (println (str "// DEBUG[best-candidate]:   current: op=" (term/format-term (:operation-term current))
                                       " specificity=" (:specificity current)
                                       " desire=" (format "%.3f" (:desire current))))
-                         (println (str "^debug[best-candidate]:   best:    op=" (term/format-term (:operation-term best))
+                         (println (str "// DEBUG[best-candidate]:   best:    op=" (term/format-term (:operation-term best))
                                       " specificity=" (:specificity best)
                                       " desire=" (format "%.3f" (:desire best)))))
                        (let [result (cond
@@ -408,8 +408,8 @@
                                       ;; Otherwise keep best
                                       :else
                                       best)]
-                         (when (= volume 100)
-                           (println (str "^debug[best-candidate]:   → selected: " (term/format-term (:operation-term result)))))
+                         (when debug?
+                           (println (str "// DEBUG[best-candidate]:   → selected: " (term/format-term (:operation-term result)))))
                          result))
                      (assoc (null-decision) :specificity 0)  ; null-decision has 0 specificity
                      decisions)]
@@ -586,9 +586,9 @@
   Returns:
     Decision record"
   [state goal current-time]
-  (let [volume (:volume state)
-        _ (when (= volume 100)
-            (println (str "^debug[suggest-decision]: CALLED for goal " (term/format-term (:term goal)))))
+  (let [debug? (:debug state)
+        _ (when debug?
+            (println (str "// DEBUG[suggest-decision]: CALLED for goal " (term/format-term (:term goal)))))
 
         ;; Try motor babbling with certain probability
         motor-babbling-enabled (get-in state [:config :motor-babbling] false)

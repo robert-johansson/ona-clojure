@@ -114,7 +114,7 @@
 
 (def cycling-goal-events-max
   "Maximum amount of goal events attention buffer holds"
-  20)
+  400)  ; Fixed to match C ONA - was 20 (20x less capacity)
 
 ;; =============================================================================
 ;; Truth Parameters
@@ -126,7 +126,7 @@
 
 (def truth-projection-decay
   "Truth confidence decay factor for temporal projection"
-  0.99)
+  0.8)  ; Fixed to match C ONA - was 0.99 causing stale beliefs to persist
 
 ;; =============================================================================
 ;; Default Configuration Map
@@ -134,9 +134,17 @@
 
 (def default-config
   "Default configuration map for NAR state initialization.
-   Can be overridden at runtime via shell commands or API."
-  {:motor-babbling false
-   :motor-babbling-chance motor-babbling-chance
+   Can be overridden at runtime via shell commands or API.
+
+   NOTE: Motor babbling is enabled by default with high initial exploration (90%)
+   to support sensorimotor learning experiments (Machine Psychology / conditioning).
+   The system learns through:
+   1. Motor babbling → random actions generate experience
+   2. Temporal induction → forms implications <(context &/ ^op) =/> outcome>
+   3. Decision making → selects actions based on learned implications
+   4. Anticipation → generates negative evidence when predictions fail"
+  {:motor-babbling true  ; ENABLED for sensorimotor learning
+   :motor-babbling-chance 0.9  ; 90% exploration initially (Machine Psychology default)
    :decision-threshold decision-threshold
    :truth-projection-decay truth-projection-decay
    :concept-durability concept-durability

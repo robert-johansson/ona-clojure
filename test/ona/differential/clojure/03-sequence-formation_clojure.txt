@@ -22,8 +22,8 @@ done with 5 additional inference steps.
 // Check concepts - should show a, b, and (a &/ b)
 //*concepts
 //term: (<a --> event> &/ <b --> event>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 21, "frequency": 1.00, "confidence": 0.73, "termlinks": []}
-//term: <a --> event> { "priority": 0.60, "usefulness": 0.50, "useCount": 2, "lastUsed": 21, "frequency": 1.00, "confidence": 0.90, "implications": [{ "term": "<<a --> event> =/> <b --> event>>", "frequency": 1.00, "confidence": 0.42, "offset": 11 }], "termlinks": []}
-//term: <b --> event> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 21, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: a { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 10, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: b { "priority": 0.60, "usefulness": 0.50, "useCount": 2, "lastUsed": 21, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
 //*done
 // cycle
 // Check stats

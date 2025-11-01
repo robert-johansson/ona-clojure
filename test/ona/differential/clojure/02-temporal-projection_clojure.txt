@@ -4,35 +4,32 @@ Type Narsese or commands. Use 'quit' to exit.
 // Test 1: Eternal belief (should not decay)
 Input: <bird --> animal>. {1.000000 0.900000}
 //*concepts
-//term: <bird --> animal> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 1, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: bird { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 1, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
 //*done
 // cycle
 // Test 2: Temporal belief at time 10
 Input: <bird --> [seen]>. :|: {1.000000 0.900000}
 //*concepts
-//term: <bird --> [seen]> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 10, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
-//term: <bird --> animal> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 1, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: bird { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 10, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
 //*done
 // cycle
 // Test 3: Advance time to 20 - temporal belief should still be recent
 //*concepts
-//term: <bird --> [seen]> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 10, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
-//term: <bird --> animal> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 1, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: bird { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 10, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
 //*done
 //*stats
 Statistics
 ----------
 currentTime:                    20
-total concepts:                 2
+total concepts:                 1
 current belief events cnt:      1
 current goal events cnt:        0
-current average concept priority: 0.600000
+current average concept priority: 0.700000
 //*done
 // cycle
 // Test 4: Advance time to 50 - temporal belief should be old, eternal should be preferred
 //*concepts
-//term: <bird --> [seen]> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 10, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
-//term: <bird --> animal> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 1, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: bird { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 10, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
 //*done
 // cycle
 // Test 5: Multiple temporal events - most recent should be spike
@@ -44,18 +41,17 @@ Input: <robin --> [flying]>. :|: {1.000000 0.800000}
 done with 10 additional inference steps.
 Input: <robin --> [flying]>. :|: {1.000000 0.700000}
 //*concepts
-//term: <bird --> [seen]> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 10, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
-//term: <bird --> animal> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 1, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
-//term: <robin --> [flying]> { "priority": 0.80, "usefulness": 0.50, "useCount": 3, "lastUsed": 122, "frequency": 1.00, "confidence": 0.70, "termlinks": []}
+//term: bird { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 10, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: robin { "priority": 0.80, "usefulness": 0.50, "useCount": 3, "lastUsed": 122, "frequency": 1.00, "confidence": 0.70, "termlinks": []}
 //*done
 //*stats
 Statistics
 ----------
 currentTime:                    123
-total concepts:                 3
+total concepts:                 2
 current belief events cnt:      0
 current goal events cnt:        0
-current average concept priority: 0.666667
+current average concept priority: 0.750000
 //*done
 // cycle
 // Test 6: Mix eternal and temporal for same concept
@@ -66,12 +62,12 @@ Input: <cat --> animal>. :|: {1.000000 0.800000}
 // executing 5 cycles
 done with 5 additional inference steps.
 //*concepts
-//term: <cat --> animal> { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 11, "frequency": 1.00, "confidence": 0.80, "termlinks": []}
+//term: cat { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 11, "frequency": 1.00, "confidence": 0.80, "termlinks": []}
 //*done
 // cycle
 // After some time, temporal should decay but eternal should remain
 //*concepts
-//term: <cat --> animal> { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 11, "frequency": 1.00, "confidence": 0.80, "termlinks": []}
+//term: cat { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 11, "frequency": 1.00, "confidence": 0.80, "termlinks": []}
 //*done
 //*stats
 Statistics

@@ -107,6 +107,26 @@
     (assoc state :volume vol)))
 
 ;; =============================================================================
+;; Command: *debug
+;; =============================================================================
+
+(defn cmd-debug
+  "Set debug output (implements *debug=0/1 or *debug=true/false)
+
+   Controls internal trace output separate from volume.
+   - *debug=1 or *debug=true: Enable debug traces
+   - *debug=0 or *debug=false: Disable debug traces
+
+   Example:
+     *volume=100 *debug=0  → See inputs/outputs only (clean)
+     *volume=0 *debug=1    → See internal traces only (mechanism)
+     *volume=100 *debug=1  → Full introspection"
+  [state value]
+  (let [v (str/lower-case value)
+        debug-enabled? (or (= v "1") (= v "true"))]
+    (assoc state :debug debug-enabled?)))
+
+;; =============================================================================
 ;; Command: *reset
 ;; =============================================================================
 
@@ -302,6 +322,7 @@
             (case cmd
               "*reset" (cmd-reset state)
               "*volume" (cmd-volume state value)
+              "*debug" (cmd-debug state value)
               "*currenttime" (cmd-currenttime state value)
               "*stampid" (cmd-stampid state value)
               "*motorbabbling" (cmd-motorbabbling state value)

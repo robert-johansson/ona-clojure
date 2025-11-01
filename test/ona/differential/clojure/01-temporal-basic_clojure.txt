@@ -22,8 +22,8 @@ done with 10 additional inference steps.
 // Capture state after sequence formation
 //*concepts
 //term: (<a --> x> &/ <b --> y>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 3, "frequency": 1.00, "confidence": 0.79, "termlinks": []}
-//term: <a --> x> { "priority": 0.60, "usefulness": 0.50, "useCount": 2, "lastUsed": 3, "frequency": 1.00, "confidence": 0.90, "implications": [{ "term": "<<a --> x> =/> <b --> y>>", "frequency": 1.00, "confidence": 0.44, "offset": 2 }], "termlinks": []}
-//term: <b --> y> { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 3, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: a { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 1, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: b { "priority": 0.60, "usefulness": 0.50, "useCount": 2, "lastUsed": 3, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
 //*done
 //*stats
 Statistics

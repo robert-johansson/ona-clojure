@@ -1,0 +1,92 @@
+OpenNARS for Applications (Clojure)
+Type Narsese or commands. Use 'quit' to exit.
+// Test: NAL-6 Dependent Variables
+// Tests: Dependent variables must bind consistently within a term
+//
+// Expected behavior:
+// - Pattern: <(#1 &/ #1) =/> same>  (same event twice = "same")
+// - Match: (bird &/ bird) → same
+// - Reject: (bird &/ robin) → not same (inconsistent binding)
+// cycle
+// cycle
+// Learn pattern: repeating same action means "same"
+Input: <bird --> x>. :|: {1.000000 0.900000}
+// executing 2 cycles
+done with 2 additional inference steps.
+Input: <bird --> x>. :|: {1.000000 0.900000}
+// executing 4 cycles
+done with 4 additional inference steps.
+Input: <same --> result>. :|: {1.000000 0.900000}
+// executing 6 cycles
+done with 6 additional inference steps.
+// cycle
+// Check pattern learned
+//*concepts
+//term: (<bird --> x> &/ <same --> result>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 9, "frequency": 1.00, "confidence": 0.77, "termlinks": []}
+//term: bird { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 4, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: same { "priority": 0.60, "usefulness": 0.50, "useCount": 2, "lastUsed": 9, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//*done
+// cycle
+// Test 1: Same input twice (should match)
+Input: <robin --> y>. :|: {1.000000 0.900000}
+// executing 10 cycles
+done with 10 additional inference steps.
+Input: <robin --> y>. :|: {1.000000 0.900000}
+// executing 12 cycles
+done with 12 additional inference steps.
+// cycle
+// Should predict: same
+// executing 5 cycles
+done with 5 additional inference steps.
+//*concepts
+//term: ((<bird --> x> &/ <robin --> y>) &/ <robin --> y>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 27, "frequency": 1.00, "confidence": 0.58, "termlinks": []}
+//term: ((<bird --> x> &/ <same --> result>) &/ <robin --> y>) { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 27, "frequency": 1.00, "confidence": 0.58, "termlinks": []}
+//term: ((<same --> result> &/ <robin --> y>) &/ <robin --> y>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 27, "frequency": 1.00, "confidence": 0.61, "termlinks": []}
+//term: (<bird --> x> &/ <robin --> y>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 16, "frequency": 1.00, "confidence": 0.72, "termlinks": []}
+//term: (<bird --> x> &/ <same --> result>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 9, "frequency": 1.00, "confidence": 0.77, "termlinks": []}
+//term: (<same --> result> &/ <robin --> y>) { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 27, "frequency": 1.00, "confidence": 0.68, "termlinks": []}
+//term: bird { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 4, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: robin { "priority": 0.70, "usefulness": 0.50, "useCount": 16, "lastUsed": 31, "frequency": 1.00, "confidence": 0.90, "predicted": { "frequency": 1.00, "confidence": 0.37, "occurrenceTime": 38.0 }, "termlinks": []}
+//term: same { "priority": 0.60, "usefulness": 0.50, "useCount": 2, "lastUsed": 9, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//*done
+// cycle
+// Test 2: Different inputs (should NOT match #1 &/ #1 pattern)
+Input: <cat --> z>. :|: {1.000000 0.900000}
+// executing 20 cycles
+done with 20 additional inference steps.
+Input: <dog --> w>. :|: {1.000000 0.900000}
+// executing 22 cycles
+done with 22 additional inference steps.
+// cycle
+// Should NOT predict same (inconsistent binding)
+// executing 5 cycles
+done with 5 additional inference steps.
+//*concepts
+//term: ((<bird --> x> &/ <robin --> y>) &/ <robin --> y>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 27, "frequency": 1.00, "confidence": 0.58, "termlinks": []}
+//term: ((<bird --> x> &/ <same --> result>) &/ <robin --> y>) { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 27, "frequency": 1.00, "confidence": 0.58, "termlinks": []}
+//term: ((<same --> result> &/ <robin --> y>) &/ <cat --> z>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 45, "frequency": 1.00, "confidence": 0.51, "termlinks": []}
+//term: ((<same --> result> &/ <robin --> y>) &/ <robin --> y>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 27, "frequency": 1.00, "confidence": 0.61, "termlinks": []}
+//term: (<bird --> x> &/ <robin --> y>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 16, "frequency": 1.00, "confidence": 0.72, "termlinks": []}
+//term: (<bird --> x> &/ <same --> result>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 9, "frequency": 1.00, "confidence": 0.77, "termlinks": []}
+//term: (<robin --> y> &/ <cat --> z>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 45, "frequency": 1.00, "confidence": 0.68, "termlinks": []}
+//term: (<same --> result> &/ <robin --> y>) { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 27, "frequency": 1.00, "confidence": 0.68, "termlinks": []}
+//term: bird { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 4, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: cat { "priority": 0.60, "usefulness": 0.50, "useCount": 7, "lastUsed": 45, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: dog { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 66, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//term: robin { "priority": 0.70, "usefulness": 0.50, "useCount": 16, "lastUsed": 31, "frequency": 1.00, "confidence": 0.90, "predicted": { "frequency": 1.00, "confidence": 0.37, "occurrenceTime": 38.0 }, "termlinks": []}
+//term: same { "priority": 0.60, "usefulness": 0.50, "useCount": 2, "lastUsed": 9, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
+//*done
+//*stats
+Statistics
+----------
+currentTime:                    94
+total concepts:                 13
+current belief events cnt:      0
+current goal events cnt:        0
+current average concept priority: 0.630769
+//*done
+// cycle
+// Expected:
+// - Pattern with dependent var: #1 binds consistently
+// - (robin &/ robin) matches (same twice)
+// - (cat &/ dog) does NOT match (different)

@@ -236,6 +236,42 @@
                                      (when impl-success? impl)))
                                  recent-sequences)
 
+          ;; CRITICAL FIX: Explicitly form (precondition &/ operation) sequences
+          ;; Replicates C ONA Cycle_ProcessBeliefEvents lines 692-729
+          ;; This is THE missing piece for sensorimotor learning!
+          operation-based-implications
+          (let [;; Find recent operation events (events where term is an operation)
+                operation-events (filter
+                                  (fn [event]
+                                    (term/operation-term? (:term event)))
+                                  recent-events)
+
+                ;; Find recent non-operation events (potential preconditions)
+                precondition-events (filter
+                                     (fn [event]
+                                       (not (term/operation-term? (:term event))))
+                                     recent-events)]
+
+            ;; For each operation event, look for preconditions before it
+            (for [op-event operation-events
+                  prec-event precondition-events
+                  :when (< (:occurrence-time prec-event) (:occurrence-time op-event))]
+
+              ;; Form sequence (precondition &/ operation)
+              (let [[seq-success? prec-op-seq]
+                    (inference/belief-intersection prec-event op-event
+                                                   current-time
+                                                   projection-decay)]
+                (when seq-success?
+                  ;; Form implication <(precondition &/ operation) =/> new-event>
+                  (let [[impl-success? impl]
+                        (inference/belief-induction prec-op-seq new-event
+                                                    current-time
+                                                    projection-decay)]
+                    (when impl-success?
+                      ;; Mark as sensorimotor implication
+                      (assoc impl :sensorimotor? true)))))))
+
           ;; SENSORIMOTOR IMPLICATIONS: Form implications from sequences containing operations
           ;; When a sequence like ((A &/ B) &/ ^op) is followed by new-event C,
           ;; we want to form: <((A &/ B) &/ ^op) =/> C>
@@ -255,9 +291,22 @@
                                                (assoc impl :sensorimotor? true))))))
                                      recent-sequences)
 
-          implications (filterv some? (concat individual-implications
-                                              sequence-implications
-                                              sensorimotor-implications))]
+          implications-raw (filterv some? (concat individual-implications
+                                                  sequence-implications
+                                                  operation-based-implications
+                                                  sensorimotor-implications))
+
+          ;; Variable introduction: Generalize implications by replacing repeated atoms with variables
+          ;; Replicates C ONA Variable_IntroduceImplicationVariables
+          implications (mapv
+                        (fn [impl]
+                          (let [impl-term (:term impl)
+                                [generalized-term variables-introduced?]
+                                (var/introduce-implication-variables impl-term false)]
+                            (if variables-introduced?
+                              (assoc impl :term generalized-term)
+                              impl)))
+                        implications-raw)]
 
       [sequences implications])))
 
@@ -289,6 +338,14 @@
   Returns:
     Updated state"
   [state impl]
+  ;; Print "Derived:" output like C ONA (when volume >= 100)
+  (when (>= (:volume state) 100)
+    (let [truth (:truth impl)
+          offset (:occurrence-time-offset impl)]
+      (println (str "Derived: dt=" offset " "
+                   (term/format-term (:term impl)) ". "
+                   "Truth: frequency=" (format "%.6f" (:frequency truth))
+                   ", confidence=" (format "%.6f" (:confidence truth))))))
   (core/add-implication state impl))
 
 ;; =============================================================================
@@ -573,24 +630,25 @@
     Updated state"
   [state selected-goals]
   (let [current-time (:current-time state)
-        volume (:volume state)]
+        volume (:volume state)
+        debug? (:debug state)]
     ;; DEBUG: Show which goals are being processed
-    (when (and (= volume 100) (seq selected-goals))
-      (println (str "^debug[process-goal-events]: Processing " (count selected-goals) " goal(s)"))
+    (when (and debug? (seq selected-goals))
+      (println (str "// DEBUG[process-goal-events]: Processing " (count selected-goals) " goal(s)"))
       (doseq [g selected-goals]
-        (println (str "^debug[process-goal-events]:   Goal: " (term/format-term (:term g))))))
+        (println (str "// DEBUG[process-goal-events]:   Goal: " (term/format-term (:term g))))))
 
     (reduce
      (fn [state goal]
        ;; Suggest decision for this goal
        (let [dec (decision/suggest-decision state goal current-time)]
          ;; DEBUG: Show decision result
-         (when (= volume 100)
-           (println (str "^debug[process-goal-events]: Decision for " (term/format-term (:term goal))))
-           (println (str "^debug[process-goal-events]:   Desire: " (format "%.3f" (:desire dec))))
-           (println (str "^debug[process-goal-events]:   Execute?: " (:execute? dec)))
+         (when (:debug state)
+           (println (str "// DEBUG[process-goal-events]: Decision for " (term/format-term (:term goal))))
+           (println (str "// DEBUG[process-goal-events]:   Desire: " (format "%.3f" (:desire dec))))
+           (println (str "// DEBUG[process-goal-events]:   Execute?: " (:execute? dec)))
            (when (:operation-term dec)
-             (println (str "^debug[process-goal-events]:   Operation: " (term/format-term (:operation-term dec))))))
+             (println (str "// DEBUG[process-goal-events]:   Operation: " (term/format-term (:operation-term dec))))))
 
          (if (:execute? dec)
            ;; High desire - try to execute operation
@@ -601,8 +659,10 @@
                  (when (= (:volume state) 100)
                    (println (str "^executed: " (term/format-term (:operation-term dec))
                                 " desire=" (format "%.2f" (:desire dec)))))
-                 ;; Add execution event back into system
-                 (core/add-event state exec-event))
+                 ;; Track last execution and add execution event back into system
+                 (-> state
+                     (assoc :last-execution (term/format-term (:operation-term dec)))
+                     (core/add-event exec-event)))
                ;; No registered operation - just log decision
                (do
                  (when (= (:volume state) 100)

@@ -36,8 +36,8 @@ done with 5 additional inference steps.
 // Check concepts for prediction
 //*concepts
 //term: (<key --> pressed> &/ <door --> opened>) { "priority": 0.60, "usefulness": 0.50, "useCount": 1, "lastUsed": 21, "frequency": 1.00, "confidence": 0.73, "termlinks": []}
-//term: <door --> opened> { "priority": 0.60, "usefulness": 0.50, "useCount": 2, "lastUsed": 50, "frequency": 1.00, "confidence": 0.90, "predicted": { "frequency": 1.00, "confidence": 0.38, "occurrenceTime": 61 }, "termlinks": []}
-//term: <key --> pressed> { "priority": 0.70, "usefulness": 0.50, "useCount": 3, "lastUsed": 50, "frequency": 1.00, "confidence": 0.90, "implications": [{ "term": "<<key --> pressed> =/> <door --> opened>>", "frequency": 1.00, "confidence": 0.42, "offset": 11 }], "termlinks": []}
+//term: door { "priority": 0.60, "usefulness": 0.50, "useCount": 3, "lastUsed": 50, "frequency": 1.00, "confidence": 0.90, "predicted": { "frequency": 1.00, "confidence": 0.38, "occurrenceTime": 61 }, "termlinks": []}
+//term: key { "priority": 0.70, "usefulness": 0.50, "useCount": 2, "lastUsed": 50, "frequency": 1.00, "confidence": 0.90, "termlinks": []}
 //*done
 //*stats
 Statistics

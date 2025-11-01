@@ -89,6 +89,7 @@
    cycling-goals      ; Priority map of goal events
    operations         ; Map of registered operations
    config             ; Configuration map
+   last-execution     ; String - name of last executed operation (for experiments)
    ])
 
 (defn init-state
@@ -98,11 +99,13 @@
    {:concepts {}
     :current-time 1
     :volume 100  ; Default to full output
+    :debug false ; Default debug traces off (use *debug=1 to enable)
     :stamp-id 1
     :cycling-beliefs (priority-map)
     :cycling-goals (priority-map)
     :operations {}
-    :config config/default-config}))
+    :config config/default-config
+    :last-execution nil}))
 
 (defn reset-state
   "Reset NAR state (implements *reset command)"
@@ -360,6 +363,17 @@
     (some (fn [table-idx]
             (get-in state [:concepts key :precondition-beliefs table-idx implication-term]))
           (range 11))))
+
+(defn get-last-execution
+  "Get the name of the last executed operation.
+
+  Args:
+    state - Current NAR state
+
+  Returns:
+    String of last executed operation name (e.g., \"^left\") or nil"
+  [state]
+  (:last-execution state))
 
 ;; =============================================================================
 ;; Statistics
